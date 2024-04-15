@@ -5,11 +5,27 @@
 */
 
 import amqp from 'amqplib'
-import connectionURL, {PENDING_QUEUE, RUNNING_QUEUE}  from './connection.js'
+import Docker from 'dockerode'
+
+import connectionURL, {PENDING_QUEUE, RUNNING_QUEUE}  from './rabbitmq_connection.js'
+import {
+  createCorrectionContainer as launchCorrectionContainer
+} from './lib/docker.js'
+
 
 function checkServerLoad() {
   // TO-DO: Implement server load checking
   return true
+}
+
+function putInRunningQueue(channel, work_id, containerId, callback) {
+  const runningTask = {
+    work_id: pendingTask.work_id,
+    id: containerId,
+    callback: pendingTask.callback
+  }
+  channel.sendToQueue(RUNNING_QUEUE, runningTask, { persistent: true })
+  console.log('Message sent to running queue')
 }
 
 async function mainLoop() {
@@ -31,22 +47,8 @@ async function mainLoop() {
           return
         }
 
-        // Launch container
-        // TO-DO: Implement container launch
-        const containerId = 'TO-DO'
-
-        // Put the message in the running queue
-        // - work_id: optional, caller's id of the exercise
-        // - id: ID of the container running the correction
-        // - callback: URL to call with the results
-        const runningTask = {
-          work_id: pendingTask.work_id,
-          id: containerId,
-          callback: pendingTask.callback
-        }
-
-        channel.sendToQueue(RUNNING_QUEUE, runningTask, { persistent: true })
-        console.log('Message sent to running queue')
+        const containerId = launchCorrectionContainer(pendingTask.image, pendingTask.file)
+        putInRunningQueue(channel, pendingTask.work_id, containerId, pendingTask.callback)
 
         // Acknowledge receipt of the message
         channel.ack(message)
@@ -57,5 +59,6 @@ async function mainLoop() {
   }
 }
 
-mainLoop()
+//mainLoop()
+launchCorrectionContainer('correction-test-1', [])
 
