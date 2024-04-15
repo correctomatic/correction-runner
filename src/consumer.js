@@ -1,5 +1,5 @@
 import amqp from 'amqplib'
-import connectionURL from './connection.js'
+import connectionURL, {PENDING_QUEUE}  from './connection.js'
 
 async function receiveMessages() {
   try {
@@ -7,12 +7,9 @@ async function receiveMessages() {
     const connection = await amqp.connect(connectionURL())
     const channel = await connection.createChannel()
 
-    // Declare the queue from which you want to consume messages
-    const queueName = 'pending_corrections'
-
     // Consume messages from the queue
     console.log('Waiting for messages...')
-    channel.consume(queueName, (message) => {
+    channel.consume(PENDING_QUEUE, (message) => {
       if (message !== null) {
         console.log('Received message:', message.content.toString())
         // Acknowledge receipt of the message

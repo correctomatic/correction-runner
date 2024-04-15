@@ -12,3 +12,5 @@ function connectionURL() {
 }
 
 export default connectionURL
+export const PENDING_QUEUE = 'pending_corrections'
+export const RUNNING_QUEUE = 'running_corrections'

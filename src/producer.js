@@ -2,12 +2,7 @@ import amqp from 'amqplib'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
-import connectionURL from './connection.js'
-
-
-const QUEUE = 'pending_corrections'
-
-
+import connectionURL, {PENDING_QUEUE}  from './connection.js'
 
 async function sendCorrection(message) {
   try {
@@ -16,7 +11,7 @@ async function sendCorrection(message) {
     const channel = await connection.createChannel()
 
     // Send the message to the queue
-    channel.sendToQueue(QUEUE, Buffer.from(message), { persistent: true })
+    channel.sendToQueue(PENDING_QUEUE, Buffer.from(message), { persistent: true })
     console.log(`Message sent: ${message}`)
 
     // Close the channel and connection
