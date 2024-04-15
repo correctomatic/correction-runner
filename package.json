@@ -1,0 +1,7 @@
+{
+  "name": "correction-runner",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Alvaro Maceda <alvaro@alvaromaceda.es>",
+  "license": "MIT"
+}
