@@ -12,7 +12,6 @@ async function receiveMessages() {
 
     // Declare the queue from which you want to consume messages
     const queueName = 'pending_corrections'
-    await channel.assertQueue(queueName, { durable: true })
 
     // Consume messages from the queue
     console.log('Waiting for messages...')

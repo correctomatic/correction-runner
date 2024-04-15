@@ -9,7 +9,6 @@ async function sendMessage(message) {
 
     // Declare the queue to which you want to send messages
     const queueName = 'pending_corrections'
-    await channel.assertQueue(queueName, { durable: true })
 
     // Send the message to the queue
     channel.sendToQueue(queueName, Buffer.from(message), { persistent: true })
