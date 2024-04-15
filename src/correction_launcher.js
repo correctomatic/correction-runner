@@ -1,10 +1,14 @@
+/*
+- Reads from pending_corrections queue
+- Check the load of the server
+- Launchs the container with the correction
+*/
+
 import amqp from 'amqplib'
 import connectionURL from './connection.js'
+const QUEUE = 'pending_corrections'
 
-async function receiveMessages() {
-
-
-
+async function mainLoop() {
   try {
     // Connect to RabbitMQ server
     const connection = await amqp.connect(connectionURL())
@@ -27,4 +31,5 @@ async function receiveMessages() {
   }
 }
 
-receiveMessages()
+mainLoop()
+

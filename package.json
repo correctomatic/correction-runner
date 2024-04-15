@@ -6,8 +6,8 @@
   "license": "LGPL-3.0-or-later",
   "type": "module",
   "scripts": {
-    "consumer": "nodemon consumer.js",
-    "producer": "node producer.js"
+    "start": "nodemon src/index.js",
+    "producer": "node src/producer.js"
   },
   "devDependencies": {
     "eslint": "^9.0.0",
