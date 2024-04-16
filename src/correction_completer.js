@@ -1,4 +1,4 @@
-import initializeDocker from './docker_connection.js'
+import initializeDocker from './servers/docker_connection.js'
 import { getDocker } from "./lib/docker.js"
 
 /*

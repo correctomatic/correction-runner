@@ -1,5 +1,5 @@
 import dotenv from 'dotenv'
-import {initializeDocker as initDocker } from './lib/docker.js'
+import {initializeDocker as initDocker } from '../lib/docker.js'
 
 dotenv.config()
 

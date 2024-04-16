@@ -1,18 +1,13 @@
-import amqp from 'amqplib'
-
-import connectionURL, {PENDING_QUEUE, RUNNING_QUEUE}  from './rabbitmq_connection.js'
-import initializeDocker from './docker_connection.js'
+import initializeDocker from './servers/docker_connection.js'
+import {
+  PENDING_QUEUE, RUNNING_QUEUE,
+  getMessageChannel
+}  from './servers/rabbitmq_connection.js'
 import { launchCorrectionContainer} from './lib/docker.js'
-
 
 function checkServerLoad() {
   // TO-DO: Implement server load checking
   return true
-}
-
-async function getMessageChannel() {
-  const connection = await amqp.connect(connectionURL())
-  return connection.createChannel()
 }
 
 function putInRunningQueue(channel, work_id, containerId, callback) {
