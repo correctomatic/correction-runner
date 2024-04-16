@@ -5,6 +5,7 @@ import { generateContainerName } from './container_names.js'
 export class NotInitializedError extends Error {}
 export class ConnectionTimeoutError extends Error {}
 export class ContainerCreationError extends Error {}
+export class ContainerStartError extends Error {}
 class TimeoutError extends Error {}
 
 function envVars(parameters) { return Object.entries(parameters).map(([key, value]) => `${key}=${value}`) }
@@ -95,11 +96,23 @@ async function createCorrectionContainer(image, file){
     image, connectionTimeout, binds,env,
   )
 
-  return container.id
+  return container
+}
+
+async function launchCorrectionContainer(image, file) {
+  const container = await createCorrectionContainer(image, file)
+  try {
+    await container.start()
+    return container.id
+  } catch (e) {
+    logger.error(e, `Container with id ${container.id} failed to start`)
+    throw new ContainerStartError(e.message)
+  }
+
 }
 
 export {
   initializeDocker,
   getDocker,
-  createCorrectionContainer,
+  launchCorrectionContainer,
 }

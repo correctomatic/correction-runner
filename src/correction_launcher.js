@@ -2,7 +2,7 @@ import amqp from 'amqplib'
 
 import connectionURL, {PENDING_QUEUE, RUNNING_QUEUE}  from './rabbitmq_connection.js'
 import initializeDocker from './docker_connection.js'
-import { createCorrectionContainer} from './lib/docker.js'
+import { launchCorrectionContainer} from './lib/docker.js'
 
 
 function checkServerLoad() {
@@ -42,7 +42,7 @@ async function mainLoop() {
           return
         }
 
-        const containerId = await createCorrectionContainer(pendingTask.image, pendingTask.file)
+        const containerId = await launchCorrectionContainer(pendingTask.image, pendingTask.file)
         putInRunningQueue(channel, pendingTask.work_id, containerId, pendingTask.callback)
 
         channel.ack(message)
