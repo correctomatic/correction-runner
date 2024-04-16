@@ -32,7 +32,7 @@ async function withTimeout(millis, promise) {
 let docker = null
 let logger = console
 
-async function initialize(dockerServer, logger = console) {
+async function initializeDocker(dockerServer, logger = console) {
   try {
     docker = new Dockerode(dockerServer)
     logger.info('Docker initialized')
@@ -45,7 +45,7 @@ async function initialize(dockerServer, logger = console) {
   }
 }
 
-async function getDocker() {
+function getDocker() {
   if(!docker) throw new Error('Docker not initialized')
   return docker
 }
@@ -54,7 +54,7 @@ async function createContainer(image, connectionTimeout = DEFAULT_OPTIONS.connec
   try {
     const container = await withTimeout(connectionTimeout, getDocker().createContainer({
       Image: image,
-      Name: generateContainerName(),
+      name: generateContainerName(),
       Env: envVars(env),
       AttachStdin: false,
       AttachStdout: true,
@@ -76,27 +76,30 @@ async function createContainer(image, connectionTimeout = DEFAULT_OPTIONS.connec
 
 const EXERCISE_FILE_IN_CONTAINER = '/tmp/exercise'
 function generateBind(exerciseFile) {
-  return `${exerciseFile}:${EXERCISE_FILE_IN_CONTAINER}`
+  return [`${exerciseFile}:${EXERCISE_FILE_IN_CONTAINER}`]
 }
 
 async function createCorrectionContainer(image, file){
+  //******************************************* */
+  // DEBUG: THIS IS FOR TESTING WITH correction-1 image
   const env = {
     DELAY: 20,
     ERROR_PROBABILITY: 0.09,
     RESPONSE_SIZE: 100
   }
+  //*******************************************
   const connectionTimeout = 1000
   const binds = generateBind(file)
 
   const container = await createContainer(
-    docker, image, connectionTimeout, binds,env,
+    image, connectionTimeout, binds,env,
   )
 
   return container.id
 }
 
 export {
-  initialize,
+  initializeDocker,
   getDocker,
   createCorrectionContainer,
 }

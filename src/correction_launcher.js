@@ -1,15 +1,8 @@
-/*
-- Reads from pending_corrections queue
-- Check the load of the server
-- Launchs the container with the correction
-*/
-
 import amqp from 'amqplib'
 
 import connectionURL, {PENDING_QUEUE, RUNNING_QUEUE}  from './rabbitmq_connection.js'
-import {
-  createCorrectionContainer as launchCorrectionContainer
-} from './lib/docker.js'
+import initializeDocker from './docker_connection.js'
+import { createCorrectionContainer} from './lib/docker.js'
 
 
 function checkServerLoad() {
@@ -28,7 +21,8 @@ function putInRunningQueue(channel, work_id, containerId, callback) {
     id: containerId,
     callback: callback
   }
-  channel.sendToQueue(RUNNING_QUEUE, runningTask, { persistent: true })
+  const message = Buffer.from(JSON.stringify(runningTask))
+  channel.sendToQueue(RUNNING_QUEUE, message, { persistent: true })
   console.log('Message sent to running queue')
 }
 
@@ -37,8 +31,9 @@ async function mainLoop() {
     const channel = await getMessageChannel()
 
     console.log('Waiting for messages...')
-    channel.consume(PENDING_QUEUE, (message) => {
-      if (message !== null) {
+    channel.consume(PENDING_QUEUE, async (message) => {
+      try {
+        if (message === null) return
         console.log('Received message:', message.content.toString())
         const pendingTask = JSON.parse(message.content.toString())
 
@@ -47,10 +42,12 @@ async function mainLoop() {
           return
         }
 
-        const containerId = launchCorrectionContainer(pendingTask.image, pendingTask.file)
+        const containerId = await createCorrectionContainer(pendingTask.image, pendingTask.file)
         putInRunningQueue(channel, pendingTask.work_id, containerId, pendingTask.callback)
 
         channel.ack(message)
+      } catch (error) {
+        console.error('Error:', error)
       }
     })
   } catch (error) {
@@ -58,6 +55,7 @@ async function mainLoop() {
   }
 }
 
-//mainLoop()
-launchCorrectionContainer('correction-test-1', [])
+initializeDocker()
+mainLoop()
+// createCorrectionContainer('correction-test-1', '/tmp/banana.txt')
 

@@ -24,3 +24,14 @@ finished_corrections:
 - work_id: optional, caller's id of the exercise
 - correction_data: correction
 - callback: URL to call with the results
+
+
+Example work for pending queue (for testing correction_launcher):
+{
+  work_id: 555,
+  image: 'correction-test-1',
+  file: '/tmp/example_exercise.txt',
+  callback: 'http://localhost:999'
+}
+
+{"work_id":555,"image":"correction-test-1","file":"/tmp/example_exercise.txt","callback":"http://localhost:999"}
