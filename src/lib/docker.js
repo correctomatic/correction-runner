@@ -1,6 +1,11 @@
+import Dockerode from 'dockerode'
 
-class ConnectionTimeoutError extends Error {}
-class ContainerCreationError extends Error {}
+import { generateContainerName } from './container_names.js'
+
+export class NotInitializedError extends Error {}
+export class ConnectionTimeoutError extends Error {}
+export class ContainerCreationError extends Error {}
+class TimeoutError extends Error {}
 
 function envVars(parameters) { return Object.entries(parameters).map(([key, value]) => `${key}=${value}`) }
 
@@ -9,7 +14,7 @@ async function withTimeout(millis, promise) {
   let timeoutPid
   const timeout = new Promise((_resolve, reject) => {
         timeoutPid = setTimeout(
-            () => reject(`Timed out after ${millis} ms.`),
+            () => reject(new TimeoutError(`Timed out after ${millis} ms.`)),
             millis)
       })
   try {
@@ -24,11 +29,32 @@ async function withTimeout(millis, promise) {
   }
 }
 
-async function createContainer(docker, image, connectionTimeout = DEFAULT_OPTIONS.connectionTimeout, binds = [], env = {}) {
+let docker = null
+let logger = console
+
+async function initialize(dockerServer, logger = console) {
   try {
-    const container = await withTimeout(connectionTimeout, docker.createContainer({
+    docker = new Dockerode(dockerServer)
+    logger.info('Docker initialized')
+  } catch(e) {
+    logger.error(e.message)
+    if(e instanceof TimeoutError) {
+      throw new ConnectionTimeoutError(e.message)
+    }
+    throw e
+  }
+}
+
+async function getDocker() {
+  if(!docker) throw new Error('Docker not initialized')
+  return docker
+}
+
+async function createContainer(image, connectionTimeout = DEFAULT_OPTIONS.connectionTimeout, binds = [], env = {}) {
+  try {
+    const container = await withTimeout(connectionTimeout, getDocker().createContainer({
       Image: image,
-      // Name: 'node-app-container', // Optional
+      Name: generateContainerName(),
       Env: envVars(env),
       AttachStdin: false,
       AttachStdout: true,
@@ -48,9 +74,10 @@ async function createContainer(docker, image, connectionTimeout = DEFAULT_OPTION
   }
 }
 
-
-const dockerServer = null
-const docker = new Docker(dockerServer)
+const EXERCISE_FILE_IN_CONTAINER = '/tmp/exercise'
+function generateBind(exerciseFile) {
+  return `${exerciseFile}:${EXERCISE_FILE_IN_CONTAINER}`
+}
 
 async function createCorrectionContainer(image, file){
   const env = {
@@ -59,7 +86,7 @@ async function createCorrectionContainer(image, file){
     RESPONSE_SIZE: 100
   }
   const connectionTimeout = 1000
-  const binds = []
+  const binds = generateBind(file)
 
   const container = await createContainer(
     docker, image, connectionTimeout, binds,env,
@@ -69,5 +96,7 @@ async function createCorrectionContainer(image, file){
 }
 
 export {
+  initialize,
+  getDocker,
   createCorrectionContainer,
 }
