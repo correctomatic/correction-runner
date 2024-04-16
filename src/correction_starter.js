@@ -57,5 +57,3 @@ async function mainLoop() {
 
 initializeDocker()
 mainLoop()
-// createCorrectionContainer('correction-test-1', '/tmp/banana.txt')
-

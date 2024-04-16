@@ -34,6 +34,7 @@ let docker = null
 let logger = console
 
 async function initializeDocker(dockerServer, logger = console) {
+  if(docker) return // Already initialized
   try {
     docker = new Dockerode(dockerServer)
     logger.info('Docker initialized')
@@ -102,7 +103,8 @@ async function createCorrectionContainer(image, file){
 async function launchCorrectionContainer(image, file) {
   const container = await createCorrectionContainer(image, file)
   try {
-    await container.start()
+    // TESTING: I'M STARTING CONTAINERS BY HAND
+    // await container.start()
     return container.id
   } catch (e) {
     logger.error(e, `Container with id ${container.id} failed to start`)

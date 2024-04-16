@@ -6,6 +6,18 @@ The queues are:
 - running_corrections: There is a docker container executing the correction
 - finished_corrections: The correction is ready, but the callback hasn't been called
 
+## Testing
+
+1) Launch the correction starter. It will take works from `pending_corrections` queue and start the corresponding containers:
+```sh
+yarn starter
+```
+2) In another console, launch the correction completer. It will check for containers finishing in this hosts, and if it is a running correction it will get the output and generate a correction in the `finished_corrections` queue:
+```sh
+yarn completer
+```
+
+
 ## Data in each queue:
 
 pending_corrections:
