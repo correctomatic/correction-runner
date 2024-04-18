@@ -47,3 +47,15 @@ Example work for pending queue (for testing correction_launcher):
 }
 
 {"work_id":555,"image":"correction-test-1","file":"/tmp/example_exercise.txt","callback":"http://localhost:999"}
+
+
+
+Send a correction:
+curl --request POST \
+  --url http://localhost:3000/grade \
+  --header 'Content-Type: multipart/form-data' \
+  --header 'User-Agent: insomnium/0.2.3-a' \
+  --form file=@/home/alvaro/Software/correctomatic/correction-api/tmp/example_exercise.txt \
+  --form work_id=my-id-for-exercise \
+  --form assignment_id=correction-test-1 \
+  --form callback=http://localhost:9000

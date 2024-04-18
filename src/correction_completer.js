@@ -1,5 +1,9 @@
+import dotenv from 'dotenv'
+dotenv.config()
+
 import initializeDocker from './servers/docker_connection.js'
 import { getDocker } from "./lib/docker.js"
+import { RUNNING_QUEUE, FINISHED_QUEUE, getMessageChannel } from './servers/rabbitmq_connection.js'
 
 /*
 We should take in consideration the following scenarios:
@@ -35,7 +39,7 @@ const running_works = []
 
 
 function isADieEvent(event) {
-  return event.Type === 'container' && event.Action === 'die'
+  return event.Type === 'container' && ( event.Action === 'die' || event.Action === 'kill')
 }
 
 function isACorrectionContainer(container) {
@@ -43,8 +47,31 @@ function isACorrectionContainer(container) {
 
 
 // Listen for the running queue
-// W
 async function listenForRunningQueue() {
+  try {
+    const channel = await getMessageChannel()
+    channel.consume(RUNNING_QUEUE, async (message) => {
+      try {
+        if (message === null) return
+        console.log('Received message:', message.content.toString())
+        const runningTask = JSON.parse(message.content.toString())
+        const container = await getDocker().getContainer(runningTask.id)
+        const inspect = await container.inspect()
+        if (inspect.State.Status === 'exited') {
+          const logs = await container.logs()
+          await container.remove()
+          await sendToFinishedQueue(runningTask, logs)
+        } else {
+          running_works.push(runningTask)
+        }
+        channel.ack(message)
+      } catch (error) {
+        console.error('Error:', error)
+      }
+    })
+  }catch (error) {
+    console.error('Error:', error)
+  }
 }
 
 async function listenForContainerCompletion() {
@@ -53,12 +80,22 @@ async function listenForContainerCompletion() {
 
   const eventStream = await getDocker().getEvents(eventFilter)
 
-  eventStream.on('data', function(chunk) {
+  eventStream.on('data', async function(chunk) {
     console.log('Event received:', chunk.toString())
     const event = JSON.parse(chunk.toString())
     if (isADieEvent(event)) {
       const id = event.Actor.ID
-      console.log('Container stopped:', event.Actor.Attributes.name)
+      console.log(`Container ${id} stopped`)
+      // Check if the container is in the running_works array
+      const index = running_works.findIndex(work => work.container_id === id)
+      if (index === -1) console.log(`Container ${id} not found in running works, ignoring event`)
+
+      console.log('Container found in running works, processing')
+      const work = running_works[index]
+      const logs = await getDocker().getContainerLogs(id)
+      await getDocker().removeContainer(id)
+      running_works.splice(index, 1)
+      await sendToFinishedQueue(work, logs)
     }
   })
 
@@ -68,4 +105,5 @@ async function listenForContainerCompletion() {
 }
 
 initializeDocker()
+listenForRunningQueue()
 listenForContainerCompletion()

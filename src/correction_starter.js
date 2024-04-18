@@ -1,3 +1,6 @@
+import dotenv from 'dotenv'
+dotenv.config()
+
 import initializeDocker from './servers/docker_connection.js'
 import {
   PENDING_QUEUE, RUNNING_QUEUE,
@@ -39,7 +42,6 @@ async function mainLoop() {
 
         const containerId = await launchCorrectionContainer(pendingTask.image, pendingTask.file)
         putInRunningQueue(channel, pendingTask.work_id, containerId, pendingTask.callback)
-
         channel.ack(message)
       } catch (error) {
         console.error('Error:', error)

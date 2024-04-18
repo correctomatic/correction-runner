@@ -1,7 +1,4 @@
 import amqp from 'amqplib'
-import dotenv from 'dotenv'
-
-dotenv.config()
 
 const RMQ_HOST = process.env.RABBITMQ_HOST
 const RMQ_USER = process.env.RABBITMQ_USER

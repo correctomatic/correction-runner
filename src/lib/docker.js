@@ -104,7 +104,8 @@ async function launchCorrectionContainer(image, file) {
   const container = await createCorrectionContainer(image, file)
   try {
     // TESTING: I'M STARTING CONTAINERS BY HAND
-    // await container.start()
+    if(process.env.DONT_START_CONTAINER='S') return container.id
+    await container.start()
     return container.id
   } catch (e) {
     logger.error(e, `Container with id ${container.id} failed to start`)
