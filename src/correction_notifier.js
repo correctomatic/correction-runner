@@ -10,7 +10,7 @@ async function mainLoop() {
   try {
     const channel = await getMessageChannel()
 
-    console.log('Waiting for messages...')
+    console.log('Notifier waiting for RabbitMQ messages...')
     channel.consume(FINISHED_QUEUE, async (message) => {
       try {
         if (message === null) return

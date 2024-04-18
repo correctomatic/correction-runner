@@ -104,6 +104,7 @@ async function listenForContainerCompletion() {
   })
 }
 
+console.log('Starting correction completer...')
 initializeDocker()
 listenForRunningQueue()
 listenForContainerCompletion()

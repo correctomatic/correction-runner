@@ -28,7 +28,7 @@ async function mainLoop() {
   try {
     const channel = await getMessageChannel()
 
-    console.log('Waiting for messages...')
+    console.log('Starter waiting for RabbitMQ messages...')
     channel.consume(PENDING_QUEUE, async (message) => {
       try {
         if (message === null) return
@@ -52,5 +52,6 @@ async function mainLoop() {
   }
 }
 
+console.log('Starting correction starter...')
 initializeDocker()
 mainLoop()
