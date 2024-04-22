@@ -8,7 +8,16 @@ export class ContainerCreationError extends Error {}
 export class ContainerStartError extends Error {}
 class TimeoutError extends Error {}
 
+// **************************************************************************
+// This is the path where the exercise file will be mounted in the container
+// **************************************************************************
+const EXERCISE_FILE_IN_CONTAINER = '/tmp/exercise'
+
+
 function envVars(parameters) { return Object.entries(parameters).map(([key, value]) => `${key}=${value}`) }
+function generateBind(exerciseFile) {
+  return [`${exerciseFile}:${EXERCISE_FILE_IN_CONTAINER}`]
+}
 
 // Credit: https://stackoverflow.com/questions/32461271/nodejs-timeout-a-promise-if-failed-to-complete-in-time
 async function withTimeout(millis, promise) {
@@ -52,6 +61,48 @@ function getDocker() {
   return docker
 }
 
+class MemoryWritableStream extends Writable {
+  constructor() {
+    super();
+    this.buffer = ''
+  }
+
+  content() {
+    return this.buffer
+  }
+
+  _write(chunk, _encoding, callback) {
+    this.buffer += chunk.toString()
+    callback()
+  }
+}
+
+// This function is used to get the logs from a container
+// The logs are multiplexed, so we need to separate them
+// IMPORTANT: we are returning the standard output and then the standard error, concatenated
+async function getContainerLogs(container) {
+  return new Promise((resolve, reject) => {
+    container.logs({ follow: true, stdout: true, stderr: true }, (err, stream) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+
+      const stdout = new MemoryWritableStream();
+      const stderr = new MemoryWritableStream();
+      container.modem.demuxStream(stream, stdout, stderr)
+
+      stream.on('end', async () => {
+        resolve(stdout.content() + stderr.content())
+      });
+
+      stream.on('error', (err) => {
+        reject(err);
+      });
+    });
+  });
+}
+
 async function createContainer(image, connectionTimeout = DEFAULT_OPTIONS.connectionTimeout, binds = [], env = {}) {
   try {
     const container = await withTimeout(connectionTimeout, getDocker().createContainer({
@@ -78,11 +129,6 @@ async function createContainer(image, connectionTimeout = DEFAULT_OPTIONS.connec
   } catch (e) {
     throw new ContainerCreationError(e.message || e)
   }
-}
-
-const EXERCISE_FILE_IN_CONTAINER = '/tmp/exercise'
-function generateBind(exerciseFile) {
-  return [`${exerciseFile}:${EXERCISE_FILE_IN_CONTAINER}`]
 }
 
 async function createCorrectionContainer(image, file){
@@ -122,4 +168,5 @@ export {
   initializeDocker,
   getDocker,
   launchCorrectionContainer,
+  getContainerLogs
 }

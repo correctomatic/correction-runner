@@ -22,18 +22,6 @@ I'm sorry this is so poorly documented. I hope this clarifies things a bit. Righ
 
 */
 
-
-// // Create a writable stream backed by a buffer
-// const writableStream = new Writable({
-//   write(chunk, encoding, callback) {
-//     // Write the chunk of data to a buffer
-//     // For simplicity, we'll just log the data here
-//     console.log('Received data:', chunk.toString());
-//     callback(); // Call the callback to indicate that the chunk has been processed
-//   }
-// });
-
-
 class MemoryWritableStream extends Writable {
   constructor() {
     super();
@@ -44,24 +32,11 @@ class MemoryWritableStream extends Writable {
     return this.buffer
   }
 
-  _write(chunk, encoding, callback) {
+  _write(chunk, _encoding, callback) {
     this.buffer += chunk.toString()
     callback()
   }
 }
-
-
-
-async function streamToString(stream, encoding='utf-8') {
-  const chunks = []
-
-  for await (const chunk of stream) {
-      chunks.push(Buffer.from(chunk))
-  }
-
-  return Buffer.concat(chunks).toString(encoding)
-}
-
 
 async function getContainerLogs(docker, containerIdOrName) {
   const container = docker.getContainer(containerIdOrName);
@@ -75,18 +50,10 @@ async function getContainerLogs(docker, containerIdOrName) {
 
       const stdout = new MemoryWritableStream();
       const stderr = new MemoryWritableStream();
-
       container.modem.demuxStream(stream, stdout, stderr)
 
-      let logs = '';
-      stream.on('data', (chunk) => {
-        logs += chunk.toString('utf8');
-      });
-
       stream.on('end', async () => {
-        console.log(stdout.content())
-        console.log(stderr.content())
-        resolve(logs);
+        resolve(stdout.content() + stderr.content())
       });
 
       stream.on('error', (err) => {
@@ -95,6 +62,7 @@ async function getContainerLogs(docker, containerIdOrName) {
     });
   });
 }
+
 
 
 async function banana(containerIdOrName) {

@@ -2,7 +2,7 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 import initializeDocker from './servers/docker_connection.js'
-import { getDocker } from "./lib/docker.js"
+import { getDocker, getContainerLogs } from "./lib/docker.js"
 import { RUNNING_QUEUE, FINISHED_QUEUE, getMessageChannel } from './servers/rabbitmq_connection.js'
 
 /*
@@ -115,7 +115,8 @@ async function listenForContainerCompletion() {
 
       console.log('Container found in running works, processing')
       const work = running_works[index]
-      const logs = await getDocker().getContainerLogs(id)
+      const container = await getDocker().getContainer(id)
+      const logs = await getContainerLogs(container)
       await getDocker().removeContainer(id)
       running_works.splice(index, 1)
       await sendToFinishedQueue(work, logs)
