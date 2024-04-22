@@ -57,7 +57,7 @@ async function sendToFinishedQueue(channel, work, logs, { error = false }) {
     correction_data: logs,
     callback: work.callback
   }
-  return channel.sendToQueue(ERROR_QUEUE, Buffer.from(JSON.stringify(message)), { persistent: true })
+  return channel.sendToQueue(FINISHED_QUEUE, Buffer.from(JSON.stringify(message)), { persistent: true })
 }
 
 
@@ -65,11 +65,13 @@ async function sendToFinishedQueue(channel, work, logs, { error = false }) {
 async function listenForRunningQueue() {
   try {
     const channel = await getMessageChannel()
+
+    let runningTask
     channel.consume(RUNNING_QUEUE, async (message) => {
       try {
         if (message === null) return
         console.log('Received message:', message.content.toString())
-        const runningTask = JSON.parse(message.content.toString())
+        runningTask = JSON.parse(message.content.toString())
         const container = await getDocker().getContainer(runningTask.id)
         const inspect = await container.inspect()
         if (inspect.State.Status === 'exited') {
@@ -83,7 +85,7 @@ async function listenForRunningQueue() {
       } catch (error) {
         console.error('Error:', error)
         // We will notify that the correction failed
-        await sendToFinishedQueue(channel, runningTask, error, { error: true })
+        await sendToFinishedQueue(channel, runningTask, 'Error getting container results', { error: true })
         channel.ack(message)
       }
     })
