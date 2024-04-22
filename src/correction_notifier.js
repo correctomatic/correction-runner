@@ -3,6 +3,14 @@ dotenv.config()
 
 /*
 TO-DO: Read messages from finished_corrections and call the URL
+
+
+This architecture is fine for a small number of messages, but it is not scalable.
+Rewrite using systems like agenda.js or bull.js
+
+BullMQ seems to be the best option for this case, but we should rewrite the other parts of the system to use it.
+https://www.dragonflydb.io/guides/bullmq
+https://docs.bullmq.io/guide/retrying-failing-jobs
 */
 import {getMessageChannel, FINISHED_QUEUE}  from './servers/rabbitmq_connection.js'
 

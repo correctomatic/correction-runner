@@ -34,7 +34,8 @@ running_corrections:
 
 finished_corrections:
 - work_id: optional, caller's id of the exercise
-- correction_data: correction
+- error: false means that the correction has been completed.
+- correction_data: correction or error in case the error field is true
 - callback: URL to call with the results
 
 

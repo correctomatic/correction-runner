@@ -36,13 +36,28 @@ And for the finishing events in Docker:
 const running_works = []
 
 
+// destroy and kill should remove the running task an return an error. The only acceptable
+// event is die, which means the container has finished
 
+function isAbnormalTerminationEvent(event) {
+  return event.Type === 'container' && ( event.Action === 'kill' || event.Action === 'destroy')
+}
 
 function isADieEvent(event) {
-  return event.Type === 'container' && ( event.Action === 'die' || event.Action === 'kill')
+  return event.Type === 'container' && event.Action === 'die'
 }
 
 function isACorrectionContainer(container) {
+}
+
+async function sendToFinishedQueue(channel, work, logs, { error = false }) {
+  const message = {
+    work_id: work.id,
+    error,
+    correction_data: logs,
+    callback: work.callback
+  }
+  return channel.sendToQueue(ERROR_QUEUE, Buffer.from(JSON.stringify(message)), { persistent: true })
 }
 
 
@@ -60,13 +75,16 @@ async function listenForRunningQueue() {
         if (inspect.State.Status === 'exited') {
           const logs = await container.logs()
           await container.remove()
-          await sendToFinishedQueue(runningTask, logs)
+          await sendToFinishedQueue(channel, runningTask, logs)
+          channel.ack(message)
         } else {
           running_works.push(runningTask)
         }
-        channel.ack(message)
       } catch (error) {
         console.error('Error:', error)
+        // We will notify that the correction failed
+        await sendToFinishedQueue(channel, runningTask, error, { error: true })
+        channel.ack(message)
       }
     })
   }catch (error) {
