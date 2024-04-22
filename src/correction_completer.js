@@ -47,9 +47,6 @@ function isADieEvent(event) {
   return event.Type === 'container' && event.Action === 'die'
 }
 
-function isACorrectionContainer(container) {
-}
-
 async function sendToFinishedQueue(channel, work, logs, { error = false }) {
   const message = {
     work_id: work.id,
@@ -59,7 +56,6 @@ async function sendToFinishedQueue(channel, work, logs, { error = false }) {
   }
   return channel.sendToQueue(FINISHED_QUEUE, Buffer.from(JSON.stringify(message)), { persistent: true })
 }
-
 
 // Listen for the running queue
 async function listenForRunningQueue() {
@@ -94,31 +90,60 @@ async function listenForRunningQueue() {
   }
 }
 
+function getRunningWork(id) {
+  return running_works.find(work => work.id === id)
+}
+
+function removeRunningWork(id) {
+  const index = running_works.findIndex(work => work.id === id)
+  if (index !== -1) {
+    running_works.splice(index, 1)
+  }
+}
+
+function abnormalTermination(event){
+  if(isAbnormalTerminationEvent(event)) {
+    const id = event.Actor.ID
+    const work = getRunningWork(id)
+    if(work) {
+      // TO-DO: create error in the finished queue
+      console.log(`Container ${id} was killed or destroyed`)
+    }
+    return true
+  }
+  return false
+}
+
 async function listenForContainerCompletion() {
-  // Filter for the event stream, doesn't seem to work
+  // Filter for the event stream, but doesn't seem to work
   const eventFilter = { event: 'die' }
 
   const eventStream = await getDocker().getEvents(eventFilter)
 
   eventStream.on('data', async function(chunk) {
-    console.log('Event received:', chunk.toString())
+    console.log('Event received:', chunk.toString()) // debug
     const event = JSON.parse(chunk.toString())
+
+    if(abnormalTermination(event)) return
+
     if (isADieEvent(event)) {
       const id = event.Actor.ID
-      console.log(`Container ${id} stopped`)
-      // Check if the container is in the running_works array
-      const index = running_works.findIndex(work => work.id === id)
-      if (index === -1) {
+      console.log(`Container ${id} finished`)
+
+      const work = getRunningWork(id)
+      if (!work) {
         console.log(`Container ${id} not found in running works, ignoring event`)
         return
       }
 
       console.log('Container found in running works, processing')
-      const work = running_works[index]
+
       const container = await getDocker().getContainer(id)
       const logs = await getContainerLogs(container)
-      await getDocker().removeContainer(id)
-      running_works.splice(index, 1)
+      //TO-DO: validate response format (ajv?)
+
+      container.remove()
+      removeRunningWork(id)
       await sendToFinishedQueue(work, logs)
     }
   })

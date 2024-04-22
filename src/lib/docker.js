@@ -1,4 +1,5 @@
 import Dockerode from 'dockerode'
+import { Writable } from 'stream'
 
 import { generateContainerName } from './container_names.js'
 
@@ -84,12 +85,12 @@ async function getContainerLogs(container) {
   return new Promise((resolve, reject) => {
     container.logs({ follow: true, stdout: true, stderr: true }, (err, stream) => {
       if (err) {
-        reject(err);
-        return;
+        reject(err)
+        return
       }
 
-      const stdout = new MemoryWritableStream();
-      const stderr = new MemoryWritableStream();
+      const stdout = new MemoryWritableStream()
+      const stderr = new MemoryWritableStream()
       container.modem.demuxStream(stream, stdout, stderr)
 
       stream.on('end', async () => {
@@ -97,7 +98,7 @@ async function getContainerLogs(container) {
       });
 
       stream.on('error', (err) => {
-        reject(err);
+        reject(err)
       });
     });
   });
