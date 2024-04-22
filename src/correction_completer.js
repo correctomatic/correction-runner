@@ -107,8 +107,11 @@ async function listenForContainerCompletion() {
       const id = event.Actor.ID
       console.log(`Container ${id} stopped`)
       // Check if the container is in the running_works array
-      const index = running_works.findIndex(work => work.container_id === id)
-      if (index === -1) console.log(`Container ${id} not found in running works, ignoring event`)
+      const index = running_works.findIndex(work => work.id === id)
+      if (index === -1) {
+        console.log(`Container ${id} not found in running works, ignoring event`)
+        return
+      }
 
       console.log('Container found in running works, processing')
       const work = running_works[index]

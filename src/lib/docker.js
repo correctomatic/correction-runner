@@ -67,6 +67,10 @@ async function createContainer(image, connectionTimeout = DEFAULT_OPTIONS.connec
         AutoRemove: false,
         Binds: binds
       },
+      // Specify the log driver and options
+      LogConfig: {
+        Type: 'local',
+      },
       // For testing errors starting the container. This will fail on start
       // Entrypoint: ['/your/entrypoint'], // Specify the entrypoint
     }))
