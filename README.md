@@ -60,3 +60,12 @@ curl --request POST \
   --form work_id=my-id-for-exercise \
   --form assignment_id=correction-test-1 \
   --form callback=http://localhost:9000
+
+
+### Notes for BullMQ
+
+https://github.com/igrek8/bullmq-dashboard
+
+https://hub.docker.com/r/igrek8/bullmq-dashboard
+
+docker run -p 3000:3000 -it igrek8/bullmq-dashboard --bullmq-prefix bull --redis-host host.docker.internal

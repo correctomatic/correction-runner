@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "amqplib": "^0.10.4",
+    "bullmq": "^5.7.8",
     "dockerode": "^4.0.2",
     "dotenv": "^16.4.5",
     "uuid": "^9.0.1"
