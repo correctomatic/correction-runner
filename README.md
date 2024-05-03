@@ -64,8 +64,14 @@ curl --request POST \
 
 ### Notes for BullMQ
 
+Guide:
+https://www.dragonflydb.io/guides/bullmq
+
 https://github.com/igrek8/bullmq-dashboard
 
 https://hub.docker.com/r/igrek8/bullmq-dashboard
 
 docker run -p 3000:3000 -it igrek8/bullmq-dashboard --bullmq-prefix bull --redis-host host.docker.internal
+
+
+
