@@ -1,12 +1,31 @@
 import { Worker } from 'bullmq'
 import { redisConfig } from './lib/bullmq.js'
 
-// Create a new BullMQ worker instance
-const worker = new Worker('exampleQueue', async job => {
-  // Simulate some asynchronous task
-  await new Promise(resolve => setTimeout(resolve, 2000))
-  console.log(`Processed job ${job.id}`)
-  // You could do more work here depending on your application's needs
+const QUEUE_NAME = 'exampleQueue'
+
+async function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function now() {
+  return new Date().toISOString()
+}
+
+const worker = new Worker(QUEUE_NAME, async job => {
+
+  const ERROR_RATE = 0.9
+
+  console.log(`${now()} - Processing job ${job.id}`)
+
+  if (Math.random() < ERROR_RATE) {
+    console.log(`${now()} - Job ${job.id} ERROR`)
+    job.updateData({ attempts: job.data.attempts + 1 });
+    throw new Error('Random error occurred')
+  }
+
+  // await delay(2000)
+  console.log(`${now()} - Job ${job.id} done - attempts: ${job.data.attempts}`)
+  return 'banana!'
 }, {
   connection: redisConfig,
 })
