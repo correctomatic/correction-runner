@@ -13,10 +13,7 @@ We should take in consideration the following scenarios:
 So for the messages in the running queue, we should:
 - Check if the container has already finished, querying docker
 - If the container has finished, we should:
-  - Get the container logs
-  - Remove the container
-  - Remove from the running_works array
-  - Send the message to the finished_works queue
+  - Complete the job
 - If the container has not finished:
   - Put the container in the running_works array, it will be completed
     when we receive an event from Docker
@@ -25,12 +22,24 @@ And for the finishing events in Docker:
 - Check if the work is in the running_works array.
   If not, it will be processed when we receive the message in the running queue
 - If it is, we should:
+  - Complete the job
+  - Remove from the running_works array
+
+
+The process of completting a job is as follows:
   - Get the container logs
   - Remove the container
-  - Remove from the running_works array
   - Send the message to the finished_works queue
 */
 
+
+async function completeJob(message, container) {
+  const logs = await getContainerLogs(container)
+  //TO-DO: validate response format (ajv?)
+  await container.remove()
+  await sendToFinishedQueue(channel, runningWork, logs)
+  channel.ack(message)
+}
 
 // Works in running queue that are not yet finished
 const running_tasks = []
@@ -73,12 +82,10 @@ async function listenForRunningQueue() {
         const inspect = await container.inspect()
 
         if (inspect.State.Status === 'exited') {
-          console.log('Container already finished, getting output')
           // The container finished before we received the message
-          const logs = await getContainerLogs(container)
-          await container.remove()
-          await sendToFinishedQueue(channel, runningWork, logs)
-          channel.ack(message)
+          console.log('Container already finished, completing job')
+          completeJob(message, container)
+          console.log('Running work acknowledged')
         } else {
           // The container is still running
           console.log('Container still running, adding to running tasks')
@@ -142,18 +149,10 @@ async function listenForContainerCompletion() {
       }
 
       try {
-        console.log('Container found in running works, processing')
-
+        console.log('Finished container found in running works, processing')
         const container = await getDocker().getContainer(id)
-        const logs = await getContainerLogs(container)
-        //TO-DO: validate response format (ajv?)
-
-        container.remove()
+        completeJob(task.message, container)
         removeRunningWork(id)
-        await sendToFinishedQueue(channel, task.work, logs)
-        console.log('Message sent to finished queue')
-        // We must confirm that the message was processed
-        channel.ack(task.message)
         console.log('Running work acknowledged')
       } catch (error) {
         console.error('Error:', error)
