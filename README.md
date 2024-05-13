@@ -6,12 +6,18 @@ The queues are:
 - running_corrections: There is a docker container executing the correction
 - finished_corrections: The correction is ready, but the callback hasn't been called
 
-## Testing
+## Testing the correction completer
+
+Testing the completer can be tricky, because you must test the case when the job arrives first to the queue and then the container finishes (the most common one) but also the case when the container has already finished when we receive the message from the queue.
+
+This is the process for testing it:
 
 1) Launch the correction starter. It will take works from `pending_corrections` queue and start the corresponding containers:
 ```sh
 yarn starter
 ```
+You can prevent the starter to start the containers (it will just create them) assigning `DONT_START_CONTAINER=S` in the `.env` file. This way you will be able to start the containers by hand and check the different cases in the correction completer.
+
 2) In another console, launch the correction completer. It will check for containers finishing in this hosts, and if it is a running correction it will get the output and generate a correction in the `finished_corrections` queue:
 ```sh
 yarn completer
