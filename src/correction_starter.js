@@ -29,6 +29,7 @@ async function putInRunningQueue(jobName, work_id, containerId, callback) {
 logger.info('Starting correction starter...')
 initializeDocker()
 
+logger.debug(`Pending queue config: ${JSON.stringify(PENDING_QUEUE_CONFIG)}`)
 new Worker(PENDING_QUEUE_NAME, async job => {
   try {
     logger.info(`Received job: ${JSON.stringify(job.data)}`)
