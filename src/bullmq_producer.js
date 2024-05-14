@@ -1,5 +1,5 @@
 import { Queue, QueueEvents } from 'bullmq'
-import { redisConfig } from './lib/bullmq.js'
+import { redisConfig } from './lib/bullmq_example.js'
 
 const QUEUE_NAME = 'exampleQueue'
 const QUEUE_CONFIG = {
