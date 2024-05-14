@@ -36,6 +36,7 @@ async function addJob(queue) {
 }
 
 
+// eslint-disable-next-line no-unused-vars
 function addJobAndProgramNext(){
   addJob(queue)
   setTimeout(addJobAndProgramNext, randomInterval())

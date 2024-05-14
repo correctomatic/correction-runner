@@ -1,4 +1,4 @@
-import { Worker } from 'bullmq'
+import { Queue, Worker } from 'bullmq'
 
 import mainLogger from './lib/logger.js'
 import {
@@ -13,34 +13,32 @@ import { launchCorrectionContainer} from './lib/docker.js'
 
 const logger = mainLogger.child({ module: 'correction_starter' })
 
-function putInRunningQueue(channel, work_id, containerId, callback) {
-  const runningTask = {
+// The queue is opened only once, when the server starts
+const runningQueue = new Queue(RUNNING_QUEUE_NAME,RUNNING_QUEUE_CONFIG)
+
+async function putInRunningQueue(jobName, work_id, containerId, callback) {
+  const jobData = {
     work_id: work_id,
     id: containerId,
     callback: callback
   }
-  const message = Buffer.from(JSON.stringify(runningTask))
-  channel.sendToQueue(RUNNING_QUEUE, message, { persistent: true })
-  logger.info('Message sent to running queue')
+  await runningQueue.add(jobName, jobData)
+  logger.debug(`Message sent to running queue: ${JSON.stringify(jobData)}`)
 }
-
-
-
 
 logger.info('Starting correction starter...')
 initializeDocker()
-// mainLoop()
 
-const _worker = new Worker(PENDING_QUEUE_NAME, async job => {
+new Worker(PENDING_QUEUE_NAME, async job => {
   try {
     logger.info(`Received job: ${JSON.stringify(job.data)}`)
     const { work_id, image, file, callback } = job.data
 
     const containerId = await launchCorrectionContainer(image, file)
-    putInRunningQueue(work_id, containerId, callback)
+    await putInRunningQueue(job.name, work_id, containerId, callback)
 
     logger.info(`Correction started. Container: ${containerId}`)
-    return `Started at ${new Date().toISOString()}`
+    return `Correction started at ${new Date().toISOString()}`
 
   } catch (error) {
     logger.error('Error:', error)
