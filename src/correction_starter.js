@@ -44,7 +44,8 @@ new Worker(PENDING_QUEUE_NAME, async job => {
     return `Correction started at ${new Date().toISOString()}`
 
   } catch (error) {
-    logger.error('Error:', error)
+    logger.error(`Error: ${error.message}`)
+    // TODO: this should go to a queue for notifying the error
     throw error
   }
 },PENDING_QUEUE_CONFIG)
