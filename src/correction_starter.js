@@ -1,6 +1,3 @@
-import dotenv from 'dotenv'
-dotenv.config()
-
 import initializeDocker from './servers/docker_connection.js'
 import {
   PENDING_QUEUE, RUNNING_QUEUE,

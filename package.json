@@ -9,17 +9,20 @@
     "start": "nodemon src/index.js",
     "producer": "node src/producer.js",
     "starter": "nodemon src/correction_starter.js",
-    "completer": "nodemon src/correction_completer.js"
+    "completer": "nodemon src/correction_completer.js",
+    "lint": "eslint ./src"
   },
   "devDependencies": {
     "eslint": "^9.0.0",
-    "nodemon": "^3.1.0"
+    "nodemon": "^3.1.0",
+    "pino-pretty": "^11.0.0"
   },
   "dependencies": {
     "amqplib": "^0.10.4",
     "bullmq": "^5.7.8",
     "dockerode": "^4.0.2",
     "dotenv": "^16.4.5",
+    "pino": "^9.1.0",
     "uuid": "^9.0.1"
   }
 }

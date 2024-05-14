@@ -1,5 +1,4 @@
-import dotenv from 'dotenv'
-dotenv.config()
+
 
 import initializeDocker from './servers/docker_connection.js'
 import { getDocker, getContainerLogs } from "./lib/docker.js"

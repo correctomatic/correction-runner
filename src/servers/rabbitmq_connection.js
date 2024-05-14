@@ -1,20 +1,11 @@
 import amqp from 'amqplib'
-
+import env from './env.js'
 
 // We share a connection between all the modules
 const connection = null
 
-function connectionURL() {
-  const RMQ_HOST = process.env.RABBITMQ_HOST
-  const RMQ_USER = process.env.RABBITMQ_USER
-  const RMQ_PASSWORD = process.env.RABBITMQ_PASSWORD
-  const RABBITMQ_URL=`amqp://${RMQ_USER}:${RMQ_PASSWORD}@${RMQ_HOST}`
-  
-  return RABBITMQ_URL
-}
-
 async function connect() {
-  return await amqp.connect(connectionURL())
+  return await amqp.connect(env.rabbit.RABBITMQ_URL)
 }
 
 async function getConnection() {

@@ -1,5 +1,3 @@
-import dotenv from 'dotenv'
-dotenv.config()
 
 /*
 TO-DO: Read messages from finished_corrections and call the URL

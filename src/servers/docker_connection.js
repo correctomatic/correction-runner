@@ -1,9 +1,8 @@
 import {initializeDocker as initDocker } from '../lib/docker.js'
-
-const DOCKER_SERVER = process.env.DOCKER_SERVER
+import env from '../env.js'
 
 function initializeDocker() {
-  initDocker(DOCKER_SERVER)
+  initDocker(env.docker.DOCKER_SERVER)
 }
 
 export default initializeDocker
