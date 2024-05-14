@@ -6,13 +6,16 @@
   "license": "LGPL-3.0-or-later",
   "type": "module",
   "scripts": {
-    "start": "nodemon src/index.js",
-    "producer": "node src/producer.js",
     "starter": "nodemon src/correction_starter.js",
     "completer": "nodemon src/correction_completer.js",
+
+    "dev:starter": "NODE_ENV=development nodemon src/correction_starter.js | npx pino-pretty",
+    "dev:completer": "nodemon src/correction_completer.js",
+
     "lint": "eslint ./src"
   },
   "devDependencies": {
+    "@eslint/js": "^9.2.0",
     "eslint": "^9.0.0",
     "nodemon": "^3.1.0",
     "pino-pretty": "^11.0.0"

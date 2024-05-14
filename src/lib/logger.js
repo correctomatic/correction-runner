@@ -1,5 +1,5 @@
 import pino from 'pino'
-import env from './env.js'
+import env from '../config/env.js'
 
 const environment =env.ENVIRONMENT
 const logLevel = env.log.LOG_LEVEL

@@ -81,3 +81,5 @@ docker run -p 3000:3000 -it igrek8/bullmq-dashboard --bullmq-prefix bull --redis
 
 
 
+Rate limiting:
+https://docs.bullmq.io/guide/rate-limiting

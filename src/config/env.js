@@ -18,6 +18,13 @@ export default {
     LOG_FILE: process.env.LOG_FILE || DEFAULT_LOG_FILE,
   },
 
+  redis: {
+    REDIS_HOST: process.env.REDIS_HOST,
+    REDIS_PORT: process.env.REDIS_PORT,
+    REDIS_PASSWORD: process.env.REDIS_PASSWORD,
+  },
+
+  // TODO: REMOVE
   rabbit: {
     RABBITMQ_URL: `amqp://${RMQ_USER}:${RMQ_PASSWORD}@${RMQ_HOST}`,
   },
