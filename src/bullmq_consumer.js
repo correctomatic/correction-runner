@@ -3,15 +3,16 @@ import { redisConfig } from './lib/bullmq_example.js'
 
 const QUEUE_NAME = 'exampleQueue'
 
+// eslint-disable-next-line no-unused-vars
 async function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise(resolve => { setTimeout(resolve, ms) })
 }
 
 function now() {
   return new Date().toISOString()
 }
 
-const worker = new Worker(QUEUE_NAME, async job => {
+const _worker = new Worker(QUEUE_NAME, async job => {
 
   const ERROR_RATE = 0.9
 
