@@ -1,6 +1,8 @@
 import globals from 'globals'
+import js from "@eslint/js";
 
 export default [
+  js.configs.recommended,
   {
     languageOptions: {
       ecmaVersion: 2022,
@@ -8,11 +10,16 @@ export default [
       globals: {
         ...globals.browser,
         ...globals.node
-      }
+      },
+    },
+    ignores: ["**/dist/*"],
+    linterOptions: {
+      noInlineConfig: false,
+      reportUnusedDisableDirectives: true,
     },
     // You can check the rules here: https://eslint.org/docs/rules/
     // If eslint is complaining about a rule not enumerated here, you can ignore it.
-    "rules": {
+    rules: {
       "complexity": ["error", { "max": 6 }],
       "array-callback-return": "error",
       "constructor-super": "error",
