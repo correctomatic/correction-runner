@@ -1,6 +1,6 @@
 import Dockerode from 'dockerode'
 import { Writable } from 'stream'
-import env from '../env.js'
+import env from '../config/env.js'
 
 import { generateContainerName } from './container_names.js'
 
