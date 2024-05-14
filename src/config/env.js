@@ -33,5 +33,4 @@ export default {
     DOCKER_SERVER: process.env.DOCKER_SERVER,
     DONT_START_CONTAINER: process.env.DONT_START_CONTAINER == 'S',
   },
-
 }

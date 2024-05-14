@@ -83,3 +83,14 @@ docker run -p 3000:3000 -it igrek8/bullmq-dashboard --bullmq-prefix bull --redis
 
 Rate limiting:
 https://docs.bullmq.io/guide/rate-limiting
+
+
+Error: Error: getaddrinfo EAI_AGAIN undefined
+  at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:118:26) {
+errno: -3001,
+code: 'EAI_AGAIN',
+syscall: 'getaddrinfo',
+hostname: 'undefined'
+  }
+
+docker run --rm -ti --env-file .env --network correctomatic-server_default correctomatic-server-starter /bin/sh

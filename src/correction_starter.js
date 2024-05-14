@@ -1,4 +1,5 @@
 import { Queue, Worker } from 'bullmq'
+import env from './config/env.js'
 
 import mainLogger from './lib/logger.js'
 import {
@@ -12,6 +13,7 @@ import initializeDocker from './servers/docker_connection.js'
 import { launchCorrectionContainer} from './lib/docker.js'
 
 const logger = mainLogger.child({ module: 'correction_starter' })
+logger.debug(`Environment: ${env}`)
 
 // The queue is opened only once, when the server starts
 const runningQueue = new Queue(RUNNING_QUEUE_NAME,RUNNING_QUEUE_CONFIG)
