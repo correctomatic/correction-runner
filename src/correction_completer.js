@@ -137,7 +137,7 @@ function listenForRunningQueue() {
       } else {
         // The container is still running
         logger.info('Container still running, adding to running tasks')
-        running_tasks.push({work: runningWork, message})
+        running_tasks.push(runningWork)
       }
     } catch (error) {
       logger.error(`Error: ${JSON.stringify(error.message)}`)

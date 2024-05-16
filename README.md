@@ -55,8 +55,6 @@ Example work for pending queue (for testing correction_launcher):
 
 {"work_id":555,"image":"correction-test-1","file":"/tmp/example_exercise.txt","callback":"http://localhost:999"}
 
-
-
 Send a correction:
 curl --request POST \
   --url http://localhost:3000/grade \
@@ -66,6 +64,15 @@ curl --request POST \
   --form work_id=my-id-for-exercise \
   --form assignment_id=correction-test-1 \
   --form callback=http://localhost:9000
+
+
+### Reseting the queues
+
+You can delete the queues running the script `reset_queues.js`:
+```sh
+
+The code wont work unless you comment the throw at the start of the file. This is done to avoid deleting the queues by mistake.
+
 
 
 ### Notes for BullMQ
