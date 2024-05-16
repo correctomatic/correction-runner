@@ -32,13 +32,7 @@ The process of completting a job is as follows:
 */
 
 
-async function completeJob(message, container) {
-  const logs = await getContainerLogs(container)
-  //TO-DO: validate response format (ajv?)
-  await container.remove()
-  await sendToFinishedQueue(channel, runningWork, logs)
-  channel.ack(message)
-}
+
 
 // Works in running queue that are not yet finished
 const running_tasks = []
@@ -67,6 +61,14 @@ async function sendToFinishedQueue(channel, work, logs, {error}={error:false}) {
   return channel.sendToQueue(FINISHED_QUEUE, Buffer.from(JSON.stringify(message)), { persistent: true })
 }
 
+async function completeJob(message, container, runningWork) {
+  const logs = await getContainerLogs(container)
+  //TO-DO: validate response format (ajv?)
+  await container.remove()
+  await sendToFinishedQueue(channel, runningWork, logs)
+  channel.ack(message)
+}
+
 // Listen for the running queue
 async function listenForRunningQueue() {
   try {
@@ -83,7 +85,7 @@ async function listenForRunningQueue() {
         if (inspect.State.Status === 'exited') {
           // The container finished before we received the message
           console.log('Container already finished, completing job')
-          completeJob(message, container)
+          completeJob(message, container, runningWork)
           console.log('Running work acknowledged')
         } else {
           // The container is still running
@@ -150,7 +152,7 @@ async function listenForContainerCompletion() {
       try {
         console.log('Finished container found in running works, processing')
         const container = await getDocker().getContainer(id)
-        completeJob(task.message, container)
+        completeJob(task.message, container, task.work)
         removeRunningWork(id)
         console.log('Running work acknowledged')
       } catch (error) {
