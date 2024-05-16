@@ -52,7 +52,8 @@ queueEvents.on('completed', ({ jobId, returnvalue }) => {
 })
 
 queueEvents.on('failed', async (job, _error) => {
-  console.log(`*** Job with id ${job.id} has failed after all retry attempts.***`);
+  console.log(job)
+  console.log(`*** Job with id ${job.jobId} has failed after all retry attempts.***`);
   // Here you can perform any cleanup tasks or log the failure
 })
 

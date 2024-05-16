@@ -15,11 +15,20 @@ function now() {
 const jobs = []
 
 const worker = new Worker(QUEUE_NAME, async job => {
-  console.log(`${now()} - Processing job ${job.id}`)
-  await delay(10000)
-  jobs.push(job)
-  job.updateProgress('')
-  return null
+  try {
+    console.log(`${now()} - Processing job ${job.id}`)
+
+    let theResolve
+    const promise = new Promise((resolve, _reject) => { theResolve = resolve})
+    promise.resolve = theResolve
+    const pendingJob = {id: job.id, promise: promise}
+
+    console.log('Adding job to pending list: ' + JSON.stringify(pendingJob))
+    jobs.push(pendingJob)
+    return await promise
+  } catch (error) {
+    console.error(error)
+  }
 }, {
   connection: redisConfig,
   autorun: false
@@ -28,11 +37,13 @@ const worker = new Worker(QUEUE_NAME, async job => {
 
 worker.run()
 setInterval(() => {
-  // This doesn't work
-  const job = jobs.pop()
-  if (!job) return
-  console.log(`Delayed execution of ${job.id}`)
-  job.moveToCompleted('Done', true)
+  console.log('Checking for pending jobs')
+  const pendingJob = jobs.pop()
+  console.log(pendingJob)
+  if (!pendingJob) return
+  const { id, promise } = pendingJob
+  console.log(`Delayed execution of ${id}`)
+  promise.resolve(new Date().toISOString())
 }, 2000)
 
 
