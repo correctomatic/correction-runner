@@ -9,13 +9,13 @@ const QUEUE_CONFIG = {
     max: 100,
     duration: 5000
   },
-  defaultJobOptions: {
-    attempts: 5, // Number of attempts before failing
-    backoff: {
-      type: 'exponential',
-      delay: 1000 // Delay between retries in milliseconds
-    }
-  }
+  // defaultJobOptions: {
+  //   attempts: 5, // Number of attempts before failing
+  //   backoff: {
+  //     type: 'exponential',
+  //     delay: 1000 // Delay between retries in milliseconds
+  //   }
+  // }
 }
 const queue = new Queue(QUEUE_NAME,QUEUE_CONFIG)
 

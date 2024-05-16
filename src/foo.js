@@ -1,7 +1,7 @@
 let foo
 
 // Define a promise
-const myPromise = new Promise((resolve, reject) => {
+const myPromise = new Promise((resolve, _reject) => {
   foo = resolve;
   // This promise doesn't resolve immediately, it waits for some other function to resolve it
   // You can pass the resolve function to other parts of your code and call it when appropriate
