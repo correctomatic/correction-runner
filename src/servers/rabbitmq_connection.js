@@ -1,5 +1,5 @@
 import amqp from 'amqplib'
-import env from './env.js'
+import env from '../config/env.js'
 
 // We share a connection between all the modules
 const connection = null
