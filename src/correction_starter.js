@@ -13,7 +13,7 @@ import initializeDocker from './servers/docker_connection.js'
 import { launchCorrectionContainer} from './lib/docker.js'
 
 const logger = mainLogger.child({ module: 'correction_starter' })
-logger.debug(`Environment: ${env}`)
+logger.debug(`Environment: ${JSON.stringify(env)}`)
 
 // The queue is opened only once, when the server starts
 const runningQueue = new Queue(RUNNING_QUEUE_NAME,RUNNING_QUEUE_CONFIG)
