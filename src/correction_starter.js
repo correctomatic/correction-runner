@@ -37,7 +37,7 @@ new Worker(PENDING_QUEUE_NAME, async job => {
     logger.info(`Received job: ${JSON.stringify(job.data)}`)
     const { work_id, image, file, callback } = job.data
 
-    const containerId = await launchCorrectionContainer(image, file)
+    const containerId = await launchCorrectionContainer(image, file, logger)
     await putInRunningQueue(job.name, work_id, containerId, callback)
 
     logger.info(`Correction started. Container: ${containerId}`)
