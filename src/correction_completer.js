@@ -9,9 +9,9 @@ import { getDocker, getContainerLogs } from "./lib/docker.js"
 const MINUTE = 60 * 1000
 const SECOND = 1000
 // Production:
-// const LOCK_DURATION = 5 * MINUTE // Lock duration in ms
+const LOCK_DURATION = 5 * MINUTE // Lock duration in ms
 // Debug:
-const LOCK_DURATION = 5 * SECOND // Lock duration in ms
+// const LOCK_DURATION = 5 * SECOND // Lock duration in ms
 const REFRESH_LOCK_INTERVAL = 1 * MINUTE
 const NUM_RECOVERS_FROM_STALL = 5
 const LOCK_TOKEN = 'correction-completer' // Unique token for the lock
@@ -161,6 +161,8 @@ async function runWorker(worker) {
       logger.error(`Error getting container results: ${JSON.stringify(error.message)}`)
       // We will notify that the correction failed
       sendToFinishedQueue(job, 'Error getting container results', { error: true })
+      // TO-DO: return value?
+      job.moveToCompleted('some return value', LOCK_TOKEN, false)
     }
 
   } catch (error) {
@@ -263,7 +265,7 @@ async function listenForContainerCompletion() {
 }
 //************************************************************************* */
 
-console.log('Starting correction completer...')
+logger.info('Starting correction completer...')
 initializeDocker()
 listenForRunningQueue()
 // listenForContainerCompletion()
