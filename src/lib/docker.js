@@ -14,7 +14,9 @@ class TimeoutError extends Error {}
 // This is the path where the exercise file will be mounted in the container
 // **************************************************************************
 const EXERCISE_FILE_IN_CONTAINER = '/tmp/exercise'
-
+const DEFAULT_OPTIONS = {
+  connectionTimeout: 2000
+}
 
 function envVars(parameters) { return Object.entries(parameters).map(([key, value]) => `${key}=${value}`) }
 function generateBind(exerciseFile) {
@@ -130,19 +132,11 @@ async function createContainer(image, connectionTimeout = DEFAULT_OPTIONS.connec
 }
 
 async function createCorrectionContainer(image, file){
-  //******************************************* */
-  // DEBUG: THIS IS FOR TESTING WITH correction-1 image
-  const env = {
-    DELAY: 20,
-    ERROR_PROBABILITY: 0.09,
-    RESPONSE_SIZE: 100
-  }
-  //*******************************************
   const connectionTimeout = 1000
   const binds = generateBind(file)
 
   const container = await createContainer(
-    image, connectionTimeout, binds,env,
+    image, connectionTimeout, binds
   )
 
   return container

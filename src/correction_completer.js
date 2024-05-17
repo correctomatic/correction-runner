@@ -7,8 +7,13 @@ import initializeDocker from './servers/docker_connection.js'
 import { getDocker, getContainerLogs } from "./lib/docker.js"
 
 const MINUTE = 60 * 1000
-const LOCK_DURATION = 5 * MINUTE // Lock duration in ms
+const SECOND = 1000
+// Production:
+// const LOCK_DURATION = 5 * MINUTE // Lock duration in ms
+// Debug:
+const LOCK_DURATION = 5 * SECOND // Lock duration in ms
 const REFRESH_LOCK_INTERVAL = 1 * MINUTE
+const NUM_RECOVERS_FROM_STALL = 5
 const LOCK_TOKEN = 'correction-completer' // Unique token for the lock
 
 import {
@@ -78,7 +83,7 @@ The job will follow the following flow:
 */
 
 const logger = mainLogger.child({ module: 'correction_starter' })
-logger.debug(`Environment: ${env}`)
+logger.debug(`Environment: ${JSON.stringify(env)}`)
 
 // Works in running queue that are not yet finished
 const runningJobs = []
@@ -121,6 +126,7 @@ async function completeJob(job, container) {
   //TO-DO: validate response format (ajv?)
   await container.remove()
   await sendToFinishedQueue(job, logs)
+  // TO-DO: return value?
   job.moveToCompleted('some return value', LOCK_TOKEN, false)
 }
 
@@ -133,12 +139,13 @@ async function runWorker(worker) {
 
   try {
     await worker.startStalledCheckTimer()
-   job = (await worker.getNextJob(LOCK_TOKEN))
+    job = (await worker.getNextJob(LOCK_TOKEN))
+    if(!job) return
 
     try {
       logger.info(`Received running job: ${JSON.stringify(job.data)}`)
 
-      const container = await getDocker().getContainer(job.data.id)
+      const container = await getDocker().getContainer(job.data.container_id)
       const inspect = await container.inspect()
 
       if (inspect.State.Status === 'exited') {
@@ -153,7 +160,7 @@ async function runWorker(worker) {
     } catch (error) {
       logger.error(`Error getting container results: ${JSON.stringify(error.message)}`)
       // We will notify that the correction failed
-      if(job) await sendToFinishedQueue(job, 'Error getting container results', { error: true })
+      sendToFinishedQueue(job, 'Error getting container results', { error: true })
     }
 
   } catch (error) {
@@ -165,6 +172,7 @@ async function listenForRunningQueue() {
   const queueOptions = {
     ...RUNNING_QUEUE_CONFIG,
     lockDuration: LOCK_DURATION,
+    maxStalledCount: NUM_RECOVERS_FROM_STALL,
   }
   const worker = new Worker(RUNNING_QUEUE_NAME, null, queueOptions)
 
