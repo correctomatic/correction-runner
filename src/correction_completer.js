@@ -7,12 +7,11 @@ import initializeDocker from './servers/docker_connection.js'
 import { getDocker, getContainerLogs } from "./lib/docker.js"
 
 const MINUTE = 60 * 1000
-const SECOND = 1000
 // Production:
 const LOCK_DURATION = 5 * MINUTE // Lock duration in ms
 // Debug:
+// const SECOND = 1000
 // const LOCK_DURATION = 5 * SECOND // Lock duration in ms
-const REFRESH_LOCK_INTERVAL = 1 * MINUTE
 const NUM_RECOVERS_FROM_STALL = 5
 const LOCK_TOKEN = 'correction-completer' // Unique token for the lock
 
@@ -25,14 +24,19 @@ import {
 
 /*
 ----------------------------------------------------
+----------------------------------------------------
 Completion algorithm
+----------------------------------------------------
 ----------------------------------------------------
 
 We should take in consideration the following scenarios:
 1) The works arrives first to running queue and then the container finishes (the normal case)
-2) The container finishes and then the work arrives to running queue
+2) The container finishes and then the work arrives to the running queue
 
-So for the messages in the running queue, we should:
+The program has two main loops: one for checking the running queue and another for listening to Docker events.
+
+For the messages in the running queue, we should do the following:
+-----------------------------------------------------------------
 - Check if the container has already finished, querying docker
 - If the container has finished, we should:
   - Complete the job
@@ -40,8 +44,9 @@ So for the messages in the running queue, we should:
   - Put the container in the running_works array, it will be completed
     when we receive an event from Docker
 
-And for the finishing events in Docker:
-- Check if the work is in the running_works array.
+For the finishing events in Docker:
+---------------------------------------
+- Check if the work is in the `runningWorks` array.
   If not, it will be processed when we receive the message in the running queue
 - If it is, we should:
   - Complete the job
@@ -52,6 +57,7 @@ The process of completting a job is as follows:
   - Get the container logs
   - Remove the container
   - Send the message to the finished_works queue
+  - Finish the message in the running queue
 */
 
 /*
@@ -62,23 +68,28 @@ ACK mechanism
 bullmq don't have a mechanism for acking messages as in RabbitMQ.
 Instead, we do the following:
 
-- Set a high lockDuration, enough to the docker containers have time to complete the correction
+- Set a high `lockDuration`, enough to the docker containers have time to complete the correction
   It's configured in `LOCK_DURATION` constant
-- Set a maxStalledCount to a high value, so the job is not aborted but retried.
+- Set a `maxStalledCount` to a high value, so the job is not aborted but retried.
 
 The job will follow the following flow:
--
+- Arrive to the running queue
+- `runWorker` will adquire the lock
+  - If the container is already finished, it will mark the job as completed, and the process will finish for that correction
+  - If the container is still running, it will add the job to the `runningJobs` array
+- The job will be locked until the lockDuration expires. No other worker will be able to take the job
 
+Then, two things can happen:
 
-// Strategy to ack:
-// - Set a high lockDuration, enough to the docker containers have time to complete the correction
-//   (but not TOO high, or it won't be retried if the process crashes. Maybe 5 minutes is a good value?)
-// - Set a maxStalledCount to a high value, so the job is not aborted but retried.
-//   In theory the job shouldn't be retried a lot, perhaps one or two times if the docker container stalls, and two more
-//   if the completer process crashes. Maybe 5 is a good value?
-// - Renew locks somehow in the completer process? Don't seems very usefull, because if we renew indefinitely
-//   the job won't fail if the container stalls. I think setting a high lockDuration is enough.
+1) The container finishes before the lock expires
+    - The Docker's finalization event will be received in the Docker event listener
+    - The job will be completed
+2) The lock expires. This can happen because the container is stalled or the process crashes
+    - The job will be retried by bullmq maxStalledCount times
+      NOTE: WHAT WILL HAPPEN IF THE JOB IS STILL IN THE RUNNING QUEUE?
+    - After that, the job will be moved to the failed queue
 
+Maybe we should add a mechanism to refresh the locks, but it's not necessary for now
 
 */
 
@@ -90,7 +101,6 @@ const runningJobs = []
 
 // destroy and kill should remove the running task an return an error. The only acceptable
 // event is die, which means the container has finished
-
 function isAbnormalTerminationEvent(event) {
   return event.Type === 'container' && ( event.Action === 'kill' || event.Action === 'destroy')
 }
@@ -115,21 +125,13 @@ async function sendToFinishedQueue(job, logs, {error}={error:false}) {
   logger.info(`Job sent to finished queue: ${JSON.stringify(jobData)}`)
 }
 
-/*
-The process of completting a job is as follows:
-  - Get the container logs
-  - Remove the container
-  - Send the message to the finished_works queue
-*/
 async function completeJob(job, container) {
   const logs = await getContainerLogs(container)
   //TO-DO: validate response format (ajv?)
   await container.remove()
   await sendToFinishedQueue(job, logs)
-  // TO-DO: return value?
-  job.moveToCompleted('some return value', LOCK_TOKEN, false)
+  job.moveToCompleted(`Correction completed at ${new Date().toISOString()}`, LOCK_TOKEN, false)
 }
-
 
 //************************************************************************* */
 // Loop for checking running queue
@@ -161,8 +163,7 @@ async function runWorker(worker) {
       logger.error(`Error getting container results: ${JSON.stringify(error.message)}`)
       // We will notify that the correction failed
       sendToFinishedQueue(job, 'Error getting container results', { error: true })
-      // TO-DO: return value?
-      job.moveToCompleted('some return value', LOCK_TOKEN, false)
+      await job.moveToFailed(`Job failed: ${error.message}`, LOCK_TOKEN, false)
     }
 
   } catch (error) {
@@ -192,37 +193,35 @@ async function listenForRunningQueue() {
 //************************************************************************* */
 
 const byId = (id) => (job) => job.data.container_id === id
-function getRunningTask(containerId) {
+function getRunningJob(containerId) {
   return runningJobs.find(byId(containerId))
 }
 
-function removeRunningWork(containerId) {
+function removeRunningJob(containerId) {
   const index = runningJobs.findIndex(byId(containerId))
   if (index !== -1) {
     runningJobs.splice(index, 1)
   }
 }
 
-function abnormalTermination(event){
+async function abnormalTermination(event){
   if(isAbnormalTerminationEvent(event)) {
     const containerId = event.Actor.ID
-    const task = getRunningTask(containerId)
-    if(task) {
+    const job = getRunningJob(containerId)
+    if(job) {
       // TO-DO: create error in the finished queue
       logger.info(`Container ${containerId} was killed or destroyed`)
+      removeRunningJob(containerId)
+      await sendToFinishedQueue(job, 'Container was killed or destroyed', { error: true })
+      await job.moveToFailed(`Container ${containerId} was killed or destroyed`, LOCK_TOKEN, false)
     }
     return true
   }
   return false
 }
 
-
 //************************************************************************* */
-// Loop for checking running queue
-//************************************************************************* */
-
-//************************************************************************* */
-// OLD
+// Loop for checking docker events
 //************************************************************************* */
 async function listenForContainerCompletion() {
   // Filter for the event stream, but doesn't seem to work
@@ -230,42 +229,44 @@ async function listenForContainerCompletion() {
   const eventStream = await getDocker().getEvents(eventFilter)
 
   eventStream.on('data', async function(chunk) {
-    console.log('Event received:', chunk.toString()) // debug
+    logger.debug(`Docker event received: ${chunk.toString()}`)
     const event = JSON.parse(chunk.toString())
 
-    if(abnormalTermination(event)) return
+    if(await abnormalTermination(event)) return
 
     if (isADieEvent(event)) {
-      const id = event.Actor.ID
-      console.log(`Container ${id} finished`)
+      const containerId = event.Actor.ID
+      logger.debug(`Container ${containerId} finished`)
 
-      const task = getRunningTask(id)
-      if (!task) {
-        console.log(`Container ${id} not found in running works, ignoring event`)
+      const job = getRunningJob(containerId)
+      if (!job) {
+        logger.debug(`Container ${containerId} not found in running works, ignoring event`)
         return
       }
 
       try {
-        console.log('Finished container found in running works, processing')
-        const container = await getDocker().getContainer(id)
-        completeJob(task.message, container, task.work)
-        removeRunningWork(id)
-        console.log('Running work acknowledged')
+        logger.info(`Container ${containerId} found in running works, processing`)
+        const container = await getDocker().getContainer(containerId)
+        completeJob(job, container)
+        removeRunningJob(containerId)
+        logger.info(`Running job ${job.id} finished`)
       } catch (error) {
-        console.error('Error:', error)
+        logger.error(`Error: ${error.message}`)
         // We will notify that the correction failed
-        await sendToFinishedQueue(channel, task.work, 'Error getting container results', { error: true })
+        await sendToFinishedQueue(job, 'Error getting container results', { error: true })
+        await job.moveToFailed(`Job failed: ${error.message}`, LOCK_TOKEN, false)
       }
     }
   })
 
   eventStream.on('error', function(err) {
-    console.error('Error listening to Docker events:', err)
+    logger.error(`Error listening to Docker events: ${err}`)
   })
 }
-//************************************************************************* */
+
+
 
 logger.info('Starting correction completer...')
 initializeDocker()
 listenForRunningQueue()
-// listenForContainerCompletion()
+listenForContainerCompletion()
