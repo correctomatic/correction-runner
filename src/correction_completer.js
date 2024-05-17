@@ -5,7 +5,11 @@ import env from './config/env.js'
 
 import initializeDocker from './servers/docker_connection.js'
 import { getDocker, getContainerLogs } from "./lib/docker.js"
-// import { RUNNING_QUEUE, FINISHED_QUEUE, getMessageChannel } from './servers/rabbitmq_connection.js'
+
+const MINUTE = 60 * 1000
+const LOCK_DURATION = 5 * MINUTE // Lock duration in ms
+const REFRESH_LOCK_INTERVAL = 1 * MINUTE
+const LOCK_TOKEN = 'correction-completer' // Unique token for the lock
 
 import {
   RUNNING_QUEUE_NAME,
@@ -13,9 +17,14 @@ import {
   FINISHED_QUEUE_NAME,
   FINISHED_QUEUE_CONFIG
 } from './config/bullmq.js'
+
 /*
+----------------------------------------------------
+Completion algorithm
+----------------------------------------------------
+
 We should take in consideration the following scenarios:
-1) The works arrives first to running queue and then the container finishes
+1) The works arrives first to running queue and then the container finishes (the normal case)
 2) The container finishes and then the work arrives to running queue
 
 So for the messages in the running queue, we should:
@@ -40,11 +49,39 @@ The process of completting a job is as follows:
   - Send the message to the finished_works queue
 */
 
+/*
+----------------------------------------------------
+ACK mechanism
+----------------------------------------------------
+
+bullmq don't have a mechanism for acking messages as in RabbitMQ.
+Instead, we do the following:
+
+- Set a high lockDuration, enough to the docker containers have time to complete the correction
+  It's configured in `LOCK_DURATION` constant
+- Set a maxStalledCount to a high value, so the job is not aborted but retried.
+
+The job will follow the following flow:
+-
+
+
+// Strategy to ack:
+// - Set a high lockDuration, enough to the docker containers have time to complete the correction
+//   (but not TOO high, or it won't be retried if the process crashes. Maybe 5 minutes is a good value?)
+// - Set a maxStalledCount to a high value, so the job is not aborted but retried.
+//   In theory the job shouldn't be retried a lot, perhaps one or two times if the docker container stalls, and two more
+//   if the completer process crashes. Maybe 5 is a good value?
+// - Renew locks somehow in the completer process? Don't seems very usefull, because if we renew indefinitely
+//   the job won't fail if the container stalls. I think setting a high lockDuration is enough.
+
+
+*/
+
 const logger = mainLogger.child({ module: 'correction_starter' })
 logger.debug(`Environment: ${env}`)
 
 // Works in running queue that are not yet finished
-const running_tasks = []
+const runningJobs = []
 
 // destroy and kill should remove the running task an return an error. The only acceptable
 // event is die, which means the container has finished
@@ -57,123 +94,122 @@ function isADieEvent(event) {
   return event.Type === 'container' && event.Action === 'die'
 }
 
-
 // The queue is opened only once, when the server starts
 const finishedQueue = new Queue(FINISHED_QUEUE_NAME,FINISHED_QUEUE_CONFIG)
-async function sendToFinishedQueue(work, logs, {error}={error:false}) {
-  const message = {
-    work_id: work.id,
-    error,
+
+async function sendToFinishedQueue(job, logs, {error}={error:false}) {
+  const { work_id, callback } = job.data
+  const jobData = {
+    work_id,
+    error, // If set, finished with error (not failed)
     correction_data: logs,
-    callback: work.callback
+    callback
   }
 
-  await finishedQueue.add(jobName, jobData)
-  logger.debug(`Message sent to finished queue: ${JSON.stringify(jobData)}`)
+  await finishedQueue.add(job.name, jobData)
+  logger.info(`Job sent to finished queue: ${JSON.stringify(jobData)}`)
 }
 
-async function completeJob(message, container, runningWork) {
+/*
+The process of completting a job is as follows:
+  - Get the container logs
+  - Remove the container
+  - Send the message to the finished_works queue
+*/
+async function completeJob(job, container) {
   const logs = await getContainerLogs(container)
   //TO-DO: validate response format (ajv?)
   await container.remove()
-  await sendToFinishedQueue(channel, runningWork, logs)
-  channel.ack(message)
+  await sendToFinishedQueue(job, logs)
+  job.moveToCompleted('some return value', LOCK_TOKEN, false)
 }
 
 
 //************************************************************************* */
-// OLD
+// Loop for checking running queue
 //************************************************************************* */
-// Listen for the running queue
-async function listenForRunningQueue_old() {
+async function runWorker(worker) {
+  let job
+
   try {
-    let runningWork
-    channel.consume(RUNNING_QUEUE, async (message) => {
-      try {
-        if (message === null) return
-        console.log('Received message:', message.content.toString())
-        runningWork = JSON.parse(message.content.toString())
-
-        const container = await getDocker().getContainer(runningWork.id)
-        const inspect = await container.inspect()
-
-        if (inspect.State.Status === 'exited') {
-          // The container finished before we received the message
-          console.log('Container already finished, completing job')
-          completeJob(message, container, runningWork)
-          console.log('Running work acknowledged')
-        } else {
-          // The container is still running
-          console.log('Container still running, adding to running tasks')
-          running_tasks.push({work: runningWork, message})
-        }
-      } catch (error) {
-        console.error('Error:', error)
-        // We will notify that the correction failed
-        await sendToFinishedQueue(channel, runningWork, 'Error getting container results', { error: true })
-        channel.ack(message)
-      }
-    })
-  }catch (error) {
-    console.error('Error:', error)
-  }
-}
-//************************************************************************* */
-// TODO: MOVER AL FINAL
-function listenForRunningQueue() {
-  new Worker(RUNNING_QUEUE_NAME, async job => {
+    await worker.startStalledCheckTimer()
+   job = (await worker.getNextJob(LOCK_TOKEN))
 
     try {
       logger.info(`Received running job: ${JSON.stringify(job.data)}`)
-      const runningWork = job.data
 
-      const container = await getDocker().getContainer(runningWork.id)
+      const container = await getDocker().getContainer(job.data.id)
       const inspect = await container.inspect()
 
       if (inspect.State.Status === 'exited') {
         // The container finished before we received the message
         logger.info('Container already finished, completing job')
-        completeJob(message, container, runningWork)
+        completeJob(job, container)
       } else {
         // The container is still running
         logger.info('Container still running, adding to running tasks')
-        running_tasks.push(runningWork)
+        runningJobs.push(job)
       }
     } catch (error) {
-      logger.error(`Error: ${JSON.stringify(error.message)}`)
+      logger.error(`Error getting container results: ${JSON.stringify(error.message)}`)
       // We will notify that the correction failed
-      await sendToFinishedQueue(channel, runningWork, 'Error getting container results', { error: true })
+      if(job) await sendToFinishedQueue(job, 'Error getting container results', { error: true })
     }
 
-  },RUNNING_QUEUE_CONFIG)
+  } catch (error) {
+    logger.error(`Error: ${JSON.stringify(error.message)}`)
+  }
 }
 
+async function listenForRunningQueue() {
+  const queueOptions = {
+    ...RUNNING_QUEUE_CONFIG,
+    lockDuration: LOCK_DURATION,
+  }
+  const worker = new Worker(RUNNING_QUEUE_NAME, null, queueOptions)
 
-
-function getRunningTask(id) {
-  return running_tasks.find(task =>task.work.id === id)
+  while(true) {
+    // This pauses the loop, it doesn't run all the time.
+    // It's executed ~ 2secs if there are no pending jobs.
+    // If a running job enters, it's executed inmediately.
+    // eslint-disable-next-line no-await-in-loop
+    await runWorker(worker)
+  }
 }
 
-function removeRunningWork(id) {
-  const index = running_tasks.findIndex(task => task.work.id === id)
+//************************************************************************* */
+// Auxiliary functions for managing docker events
+//************************************************************************* */
+
+const byId = (id) => (job) => job.data.container_id === id
+function getRunningTask(containerId) {
+  return runningJobs.find(byId(containerId))
+}
+
+function removeRunningWork(containerId) {
+  const index = runningJobs.findIndex(byId(containerId))
   if (index !== -1) {
-    running_tasks.splice(index, 1)
+    runningJobs.splice(index, 1)
   }
 }
 
 function abnormalTermination(event){
   if(isAbnormalTerminationEvent(event)) {
-    const id = event.Actor.ID
-    const task = getRunningTask(id)
+    const containerId = event.Actor.ID
+    const task = getRunningTask(containerId)
     if(task) {
       // TO-DO: create error in the finished queue
-      console.log(`Container ${id} was killed or destroyed`)
+      logger.info(`Container ${containerId} was killed or destroyed`)
     }
     return true
   }
   return false
 }
 
+
+//************************************************************************* */
+// Loop for checking running queue
+//************************************************************************* */
 
 //************************************************************************* */
 // OLD

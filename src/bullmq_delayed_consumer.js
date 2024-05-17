@@ -54,8 +54,7 @@ async function runWorker() {
   // await worker.close()
 }
 
-runWorker()
-setInterval(runWorker, 20000)
+// setInterval(runWorker, 20000)
 
 setInterval(() => {
   console.log('Completer - Checking for pending jobs...')
@@ -68,7 +67,11 @@ setInterval(() => {
 
 }, 15000)
 
-
+// This pauses for some time if there are no jobs available
+while(true) {
+  // eslint-disable-next-line no-await-in-loop
+  await runWorker()
+}
 
 /*
 job stalled more than allowable limit
