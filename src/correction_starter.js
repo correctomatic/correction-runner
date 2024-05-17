@@ -21,7 +21,7 @@ const runningQueue = new Queue(RUNNING_QUEUE_NAME,RUNNING_QUEUE_CONFIG)
 async function putInRunningQueue(jobName, work_id, containerId, callback) {
   const jobData = {
     work_id: work_id,
-    id: containerId,
+    container_id: containerId,
     callback: callback
   }
   await runningQueue.add(jobName, jobData)
