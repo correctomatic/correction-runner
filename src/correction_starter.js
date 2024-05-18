@@ -23,6 +23,7 @@ async function putInRunningQueue(jobName, work_id, containerId, callback) {
     work_id: work_id,
     container_id: containerId,
     callback: callback
+    // file_hash: file_hash // TO-DO: add file_hash
   }
   await runningQueue.add(jobName, jobData)
   logger.debug(`Message sent to running queue: ${JSON.stringify(jobData)}`)

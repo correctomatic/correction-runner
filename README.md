@@ -32,7 +32,6 @@ pending_corrections:
   - file: file with the exercise
   - callback: URL to call with the results
 
-
 running_corrections:
   - work_id: optional, caller's id of the exercise
   - id: ID of the container running the correction
