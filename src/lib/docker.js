@@ -70,7 +70,7 @@ function getDocker() {
 
 class MemoryWritableStream extends Writable {
   constructor() {
-    super();
+    super()
     this.buffer = ''
   }
 
@@ -101,13 +101,13 @@ async function getContainerLogs(container) {
 
       stream.on('end', async () => {
         resolve(stdout.content() + stderr.content())
-      });
+      })
 
       stream.on('error', (err) => {
         reject(err)
-      });
-    });
-  });
+      })
+    })
+  })
 }
 
 async function createContainer(image, connectionTimeout = DEFAULT_OPTIONS.connectionTimeout, binds = [], env = {}) {

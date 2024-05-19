@@ -20,7 +20,7 @@ const _worker = new Worker(QUEUE_NAME, async job => {
 
   if (Math.random() < ERROR_RATE) {
     console.log(`${now()} - Job ${job.id} ERROR`)
-    job.updateData({ attempts: job.data.attempts + 1 });
+    job.updateData({ attempts: job.data.attempts + 1 })
     throw new Error('Random error occurred')
   }
 

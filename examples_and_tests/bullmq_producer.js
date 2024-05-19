@@ -22,7 +22,7 @@ const queue = new Queue(QUEUE_NAME,QUEUE_CONFIG)
 const MIN_INTERVAL = 1000
 const MAX_INTERVAL = 3000
 function randomInterval(){
-  return Math.floor(Math.random() * (MAX_INTERVAL - MIN_INTERVAL + 1)) + MIN_INTERVAL;
+  return Math.floor(Math.random() * (MAX_INTERVAL - MIN_INTERVAL + 1)) + MIN_INTERVAL
 }
 
 let jobCounter = 1
@@ -53,7 +53,7 @@ queueEvents.on('completed', ({ jobId, returnvalue }) => {
 
 queueEvents.on('failed', async (job, _error) => {
   console.log(job)
-  console.log(`*** Job with id ${job.jobId} has failed after all retry attempts.***`);
+  console.log(`*** Job with id ${job.jobId} has failed after all retry attempts.***`)
   // Here you can perform any cleanup tasks or log the failure
 })
 
