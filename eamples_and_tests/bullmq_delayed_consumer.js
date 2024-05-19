@@ -1,5 +1,5 @@
 import { Worker } from 'bullmq'
-import { redisConfig } from './config/bullmq_example.js'
+import { redisConfig } from '../src/config/bullmq_example.js'
 
 const QUEUE_NAME = 'exampleQueue'
 

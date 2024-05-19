@@ -1,5 +1,5 @@
-import initializeDocker from './servers/docker_connection.js'
-import { getDocker } from "./lib/docker.js"
+import initializeDocker from '../src/servers/docker_connection.js'
+import { getDocker } from "../src/lib/docker.js"
 import { Writable } from 'stream'
 
 /*

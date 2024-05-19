@@ -6,10 +6,6 @@ const DEFAULT_ENVIRONMENT = 'production'
 const DEFAULT_LOG_LEVEL = 'info'
 const DEFAULT_LOG_FILE = 'correctomatic.log'
 
-const RMQ_HOST = process.env.RABBITMQ_HOST
-const RMQ_USER = process.env.RABBITMQ_USER
-const RMQ_PASSWORD = process.env.RABBITMQ_PASSWORD
-
 export default {
   ENVIRONMENT: process.env.NODE_ENV || DEFAULT_ENVIRONMENT,
 
@@ -22,11 +18,6 @@ export default {
     REDIS_HOST: process.env.REDIS_HOST,
     REDIS_PORT: process.env.REDIS_PORT,
     REDIS_PASSWORD: process.env.REDIS_PASSWORD,
-  },
-
-  // TODO: REMOVE
-  rabbit: {
-    RABBITMQ_URL: `amqp://${RMQ_USER}:${RMQ_PASSWORD}@${RMQ_HOST}`,
   },
 
   docker: {
