@@ -7,6 +7,39 @@ It has three main components:
 - **Correction completer**: It will check for jobs in the running_corrections queue and, once the container has finished, it will get the output and generate a correction in the `finished_corrections` queue.
 - **Correction notifier**: It will take works from the `finished_corrections` queue and call the callback URL with the results.
 
+The correction starter expects a message in the `pending_corrections` queue with the following fields:
+- `work_id`: optional, caller's id of the exercise
+- `image`: name of the image to run
+- `file`: file with the exercise
+- `callback`: URL to call with the results
+
+There is an implementation of a web service that will receive a file and the image to run, and will put the message in the queue. It's in this repository: https://github.com/correctomatic/correction-API
+
+Once the correction has finished, the correction completer will make a POST request to the `callback` URL with the results. The results will be in the body of the request, and the `Content-Type` will be `application/json`. If the correction has finished correctly, the body will be:
+```json
+{
+  TO-DO
+}
+```
+
+You have the schemas of the response in the `src\schemas\¿¿???` file.
+
+
+## Creating a container for a correction
+
+TO-DO
+- Explain how it will receive the exercies
+- Explain what should be the output of the container
+
+You have the schemas of the required response in the `src\schemas\container_response_schema.json` file.
+
+## Security
+
+Take in account that there is no security implemented in this system. Anyone can send a message to the `pending_corrections` queue and it will be processed. You should implement some kind of security in the API that sends the messages to the queue.
+
+**The system can run arbitrary containers in the docker server**, so it can be a security risk. Please take that into account when deploying the system: the Redis server should be accessible only from a trusted network.
+
+
 ## Scaling the system
 
 The three components are independent, so you can (almost) run them in different hosts if you want to scale the system. They communicate through a Redis MQ server, using the `bullmq` library. In theory, you can run as many instances of each component as you want, but it has not been tested.
