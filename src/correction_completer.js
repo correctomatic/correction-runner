@@ -126,8 +126,11 @@ async function sendToFinishedQueue(job, logs, {error}={error:false}) {
 }
 
 async function completeJob(job, container) {
+  
   const logs = await getContainerLogs(container)
   //TO-DO: validate response format (ajv?)
+
+
   await container.remove()
   await sendToFinishedQueue(job, logs)
   job.moveToCompleted(`Correction completed at ${new Date().toISOString()}`, LOCK_TOKEN, false)
