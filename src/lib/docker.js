@@ -13,8 +13,11 @@ class TimeoutError extends Error {}
 
 // **************************************************************************
 // This is the path where the exercise file will be mounted in the container
+// It's part of the specification, so DON'T CHANGE IT unless you change
+// the major version of the correction system
 // **************************************************************************
 const EXERCISE_FILE_IN_CONTAINER = '/tmp/exercise'
+
 const DEFAULT_OPTIONS = {
   connectionTimeout: 2000
 }
