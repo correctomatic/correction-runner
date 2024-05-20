@@ -1,4 +1,5 @@
 import { Queue, Worker } from 'bullmq'
+import Ajv from 'ajv'
 
 import mainLogger from './lib/logger.js'
 import env from './config/env.js'
@@ -21,6 +22,10 @@ import {
   FINISHED_QUEUE_NAME,
   FINISHED_QUEUE_CONFIG
 } from './config/bullmq.js'
+
+import {
+  CONTAINER_RESPONSE_SCHEMA
+} from './schemas/index.js'
 
 /*
 ----------------------------------------------------
@@ -109,6 +114,16 @@ function isADieEvent(event) {
   return event.Type === 'container' && event.Action === 'die'
 }
 
+function initializeAjv() {
+  const options = {
+    allErrors: false,
+    verbose: false
+  }
+  return new Ajv(options)
+}
+let ajv = initializeAjv
+let responseValidator = ajv.compile(CONTAINER_RESPONSE_SCHEMA)
+
 // The queue is opened only once, when the server starts
 const finishedQueue = new Queue(FINISHED_QUEUE_NAME,FINISHED_QUEUE_CONFIG)
 
@@ -125,14 +140,33 @@ async function sendToFinishedQueue(job, logs, {error}={error:false}) {
   logger.info(`Job sent to finished queue: ${JSON.stringify(jobData)}`)
 }
 
-async function completeJob(job, container) {
-  
-  const logs = await getContainerLogs(container)
-  //TO-DO: validate response format (ajv?)
+async function failJob(job, result, errorMessage) {
+  logger.error(`${result}: ${errorMessage}`)
+  await sendToFinishedQueue(job, result, { error: true })
+  await job.moveToFailed(`Job failed: ${errorMessage}`, LOCK_TOKEN, false)
+}
 
+async function completeJob(job, container) {
+
+  let logs
+  try {
+    logs = await getContainerLogs(container)
+  } catch (error) {
+    failJob(job, 'Error getting container logs', error.message)
+    return
+  }
+
+  let response
+  try {
+    response = JSON.parse(logs)
+    if(!responseValidator(response)) throw new Error('Invalid response format')
+  } catch (error) {
+    failJob(job, 'Error processing container logs', error.message)
+    return
+  }
 
   await container.remove()
-  await sendToFinishedQueue(job, logs)
+  await sendToFinishedQueue(job, response)
   job.moveToCompleted(`Correction completed at ${new Date().toISOString()}`, LOCK_TOKEN, false)
 }
 
@@ -163,10 +197,7 @@ async function runWorker(worker) {
         runningJobs.push(job)
       }
     } catch (error) {
-      logger.error(`Error getting container results: ${JSON.stringify(error.message)}`)
-      // We will notify that the correction failed
-      sendToFinishedQueue(job, 'Error getting container results', { error: true })
-      await job.moveToFailed(`Job failed: ${error.message}`, LOCK_TOKEN, false)
+      failJob(job, 'Error getting container results', error.message)
     }
 
   } catch (error) {
@@ -215,8 +246,7 @@ async function abnormalTermination(event){
       // TO-DO: create error in the finished queue
       logger.info(`Container ${containerId} was killed or destroyed`)
       removeRunningJob(containerId)
-      await sendToFinishedQueue(job, 'Container was killed or destroyed', { error: true })
-      await job.moveToFailed(`Container ${containerId} was killed or destroyed`, LOCK_TOKEN, false)
+      failJob(job, 'Container was killed or destroyed', `Container ${containerId} was killed or destroyed`)
     }
     return true
   }
@@ -254,10 +284,7 @@ async function listenForContainerCompletion() {
         removeRunningJob(containerId)
         logger.info(`Running job ${job.id} finished`)
       } catch (error) {
-        logger.error(`Error: ${error.message}`)
-        // We will notify that the correction failed
-        await sendToFinishedQueue(job, 'Error getting container results', { error: true })
-        await job.moveToFailed(`Job failed: ${error.message}`, LOCK_TOKEN, false)
+        failJob(job, 'Error getting container results', error.message)
       }
     }
   })
