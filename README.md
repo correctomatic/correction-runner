@@ -4,25 +4,42 @@ This is the main component of the correction system. It is in charge of running 
 
 It has three main components:
 - **Correction starter**: It will take works from the `pending_corrections` queue and start the corresponding containers. Once the container is started, it will move the work to the `running_corrections` queue.
-- **Correction completer**: It will check for jobs in the running_corrections queue and, once the container has finished, it will get the output and generate a correction in the `finished_corrections` queue.
+- **Correction completer**: It will check for jobs in the `running_corrections` queue and, once the container has finished, it will get the output and generate a correction in the `finished_corrections` queue.
 - **Correction notifier**: It will take works from the `finished_corrections` queue and call the callback URL with the results.
 
 The correction starter expects a message in the `pending_corrections` queue with the following fields:
 - `work_id`: optional, caller's id of the exercise
 - `image`: name of the image to run
-- `file`: file with the exercise
+- `file`: path of the file with the exercise
 - `callback`: URL to call with the results
 
-There is an implementation of a web service that will receive a file and the image to run, and will put the message in the queue. It's in this repository: https://github.com/correctomatic/correction-API
+There is an implementation of a web service that will receive a file and the image to run, and puts the message in the queue. It's in this repository: https://github.com/correctomatic/correction-API
 
-Once the correction has finished, the correction completer will make a POST request to the `callback` URL with the results. The results will be in the body of the request, and the `Content-Type` will be `application/json`. If the correction has finished correctly, the body will be:
+Once the correction has finished, the correction completer will make a POST request to the `callback` URL with the results. The results will be in the body of the request, and the `Content-Type` will be `application/json`. If the correction has finished correctly, the body will be like this:
+
 ```json
 {
-  TO-DO
+  "success": true,
+  "work_id": "123456",
+  "grade": 7.98,
+  "comments": [
+    "If priests would eat",
+    "pebbles from the riveeeer"
+  ]
 }
 ```
 
-You have the schemas of the response in the `src\schemas\¿¿???` file.
+If there was an error in the correction, the body will be:
+
+```json
+{
+  "success": false,
+  "work_id": "123456",
+  "error": "The dog ate my correction"
+}
+```
+
+You have the schema of the response in the `correctomatic_response.json` file.
 
 
 ## Creating a container for a correction
@@ -31,7 +48,7 @@ TO-DO
 - Explain how it will receive the exercies
 - Explain what should be the output of the container
 
-You have the schemas of the required response in the `src\schemas\container_response_schema.json` file.
+You have the schema of the required response in the `src\schemas\container_response_schema.json` file.
 
 ## Security
 

@@ -4,7 +4,7 @@ import { dirname, join, resolve } from 'path'
 
 const currentDirPath = dirname(fileURLToPath(import.meta.url))
 
-const SCHEMA_FILE = 'container_response_schema.json'
+const SCHEMA_FILE = 'container_response.json'
 
 const schemaFilePath = join(currentDirPath, SCHEMA_FILE)
 const fileContents = fs.readFileSync(resolve(schemaFilePath), 'utf8')
