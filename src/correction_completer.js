@@ -121,7 +121,7 @@ function initializeAjv() {
   }
   return new Ajv(options)
 }
-let ajv = initializeAjv
+let ajv = initializeAjv()
 let responseValidator = ajv.compile(CONTAINER_RESPONSE_SCHEMA)
 
 // The queue is opened only once, when the server starts
@@ -142,8 +142,10 @@ async function sendToFinishedQueue(job, logs, {error}={error:false}) {
 
 async function failJob(job, result, errorMessage) {
   logger.error(`${result}: ${errorMessage}`)
-  await sendToFinishedQueue(job, result, { error: true })
-  await job.moveToFailed(`Job failed: ${errorMessage}`, LOCK_TOKEN, false)
+  await sendToFinishedQueue(job,`${result} - ${errorMessage}`, { error: true })
+  const failedMessage = `Job failed: ${errorMessage}`
+  await job.moveToFailed(new Error(failedMessage), LOCK_TOKEN, false)
+  return failedMessage
 }
 
 async function completeJob(job, container) {
@@ -152,8 +154,7 @@ async function completeJob(job, container) {
   try {
     logs = await getContainerLogs(container)
   } catch (error) {
-    failJob(job, 'Error getting container logs', error.message)
-    return
+    return failJob(job, 'Error getting container logs', error.message)
   }
 
   let response
@@ -161,8 +162,8 @@ async function completeJob(job, container) {
     response = JSON.parse(logs)
     if(!responseValidator(response)) throw new Error('Invalid response format')
   } catch (error) {
-    failJob(job, 'Error processing container logs', error.message)
-    return
+    logger.debug(`Error in response format for the container ${job.data.container_id}: ${error.message}`)
+    return failJob(job, 'Error processing container logs', error.message)
   }
 
   await container.remove()

@@ -18,5 +18,4 @@ deleteQueue(FINISHED_QUEUE_NAME, FINISHED_QUEUE_CONFIG)
 
 // TODO: remove after finishing the tests with bullmq
 import { redisConfig } from './config/bullmq_example.js'
-console.log('redisConfig', redisConfig)
 deleteQueue('exampleQueue', { connection: redisConfig})
