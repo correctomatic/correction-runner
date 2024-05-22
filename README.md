@@ -91,6 +91,13 @@ TO-DO
 - The correctomatic server
 - How to launch the different components
 
+### Generate a pair of keys
+
+TO-DO
+
+You can generate a pair of keys to sign the JWT tokens with the script `utils\generate_keys.js`. It will generate the files `privateKey.pem` and `publicKey.pem` in the root directory. The private key will be encripted with the password `PRIVATE_KEY_PASSWORD` defined in the `.env` file.
+
+
 
 ### Reseting the queues
 

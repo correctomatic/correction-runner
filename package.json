@@ -24,6 +24,7 @@
     "bullmq": "^5.7.8",
     "dockerode": "^4.0.2",
     "dotenv": "^16.4.5",
+    "json-canonicalize": "^1.0.6",
     "pino": "^9.1.0",
     "uuid": "^9.0.1"
   }
