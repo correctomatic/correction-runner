@@ -58,6 +58,7 @@ async function notify(jobData) {
     },
     body: JSON.stringify(signedNotificationData),
   })
+
   if(!response.ok) {
     throw new Error(`Failed to send notification to ${url}. Status: ${response.status}`)
   }
