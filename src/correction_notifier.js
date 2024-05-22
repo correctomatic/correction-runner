@@ -73,6 +73,7 @@ It expects the following data in the job:
 - callback: URL to call with the results
 */
 logger.debug(`Finished queue config: ${JSON.stringify(FINISHED_QUEUE_CONFIG)}`)
+logger.info(`Starting ${env.bullmq.CONCURRENT_NOTIFIERS} concurrent notifiers`)
 new Worker(FINISHED_QUEUE_NAME, async job => {
   try {
     logger.info(`Received job: ${JSON.stringify(job.data)}`)
@@ -81,11 +82,13 @@ new Worker(FINISHED_QUEUE_NAME, async job => {
     logger.info(`Sending notification to ${callback}`)
     await notify(job.data)
 
-    logger.info('Notification sent successfully to', callback)
+    logger.info(`Notification sent successfully to ${callback}`)
     return(`Notification sent to ${callback} at ${new Date().toISOString()}`)
 
   } catch (error) {
-    logger.error(`Error sending notification: ${error.message}`)
+    const errorMessage = `${(new Date()).toISOString()} Error sending notification: ${error.message}`
+    logger.error(errorMessage)
+    job.log(errorMessage)
     // Throwing an error retries the job, until max attempts are reached
     throw error
   }

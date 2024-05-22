@@ -56,7 +56,7 @@ const FINISHED_QUEUE_CONFIG = {
     attempts: 5, // Number of attempts before failing
     backoff: {
       type: 'exponential',
-      delay: 2000 // Delay between retries in milliseconds
+      delay: 5000 // Delay between retries in milliseconds
     }
   }
 }
