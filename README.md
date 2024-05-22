@@ -94,9 +94,13 @@ TO-DO
 
 ### Reseting the queues
 
-You can delete the queues running the script `reset_queues.js`:
+You can delete the queues running the script `utils\reset_queues.js`:
 
 The code won't work unless you comment the `throw` at the start of the file. It's implemented this way to avoid deleting the queues by mistake.
+
+### Remove dangling correction containers
+
+You can remove the correction container generated during the tests with the script `utils\remove_containers.sh`:
 
 
 ### Testing the correction completer
@@ -131,7 +135,7 @@ yarn completer
 
 - **finished_corrections**:
   - `work_id`: optional, caller's id of the exercise
-  - `error`: false means that the correction has been completed.
+  - `error`: false means that the correction has finished with an error (the container failed or returned an error in the correction)
   - `correction_data`: correction or error in case the error field is true
   - `callback`: URL to call with the results
 
