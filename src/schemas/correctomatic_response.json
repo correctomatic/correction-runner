@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Correctomatic response",
+  "type": "object",
+  "oneOf": [
+    { "$ref": "#/definitions/successResponse" },
+    { "$ref": "#/definitions/failedResponse" }
+  ],
+  "definitions": {
+    "successResponse": {
+      "title": "Correctomatic succeeded response",
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [true]
+        },
+        "work_id": {
+          "type": "string"
+        },
+        "grade": {
+          "type": "number"
+        },
+        "comments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "success"
+      ],
+      "anyOf": [
+        { "required": ["grade"] },
+        { "required": ["comments"] }
+      ]
+    },
+    "failedResponse": {
+      "title": "Correctomatic failed response",
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [false]
+        },
+        "work_id": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "success",
+        "error"
+      ]
+    }
+  }
+}

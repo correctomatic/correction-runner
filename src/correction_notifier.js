@@ -1,87 +1,92 @@
-import dotenv from 'dotenv'
-dotenv.config()
+import { canonicalize } from 'json-canonicalize';
+
+import { Worker } from 'bullmq'
+import env from './config/env.js'
+
+import mainLogger from './lib/logger.js'
+import {
+  FINISHED_QUEUE_NAME,
+  FINISHED_QUEUE_CONFIG
+} from './config/bullmq.js'
+
+const logger = mainLogger.child({ module: 'correction_notifier' })
+logger.debug(`Environment: ${JSON.stringify(env)}`)
 
 /*
-TO-DO: Read messages from finished_corrections and call the URL
+We have two types of responses:
+- Success: { success: true, work_id, grade, comments }
+- Failure: { success: false, work_id, error }
 
+The container response (stored in container_data) will have the following structure:
+{
+  success: true,
+  grade: 10,
+  comments: ['Good job!']
+}
+In case of error:
+{
+  success: false,
+  error: 'Invalid file format'
+}
 
-This architecture is fine for a small number of messages, but it is not scalable.
-Rewrite using systems like agenda.js or bull.js
-
-BullMQ seems to be the best option for this case, but we should rewrite the other parts of the system to use it.
-https://www.dragonflydb.io/guides/bullmq
-https://docs.bullmq.io/guide/retrying-failing-jobs
+We just need to add the work_id to correction_data and sign the response
 */
-import {getMessageChannel, FINISHED_QUEUE}  from './servers/rabbitmq_connection.js'
 
-async function notifyURL(url) {
+function signResponse(response) {
+  const canonicalized = canonicalize(response)
+  // TO-DO: Sign the response
+  return canonicalized
+}
+
+function buildNotificationData(jobData) {
+  return {
+    work_id: jobData.work_id,
+    ...jobData.correction_data
+  }
+}
+
+async function notify(jobData) {
+  const { callback: url } = jobData
+
+  const notificationData = buildNotificationData(jobData)
+  const signedNotificationData = signResponse(notificationData)
+
   const response = await fetch(url, {
     method: 'POST',
     headers: {
         'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ message: 'Notification message' }),
+    body: JSON.stringify(signedNotificationData),
   })
+
   if(!response.ok) {
     throw new Error(`Failed to send notification to ${url}. Status: ${response.status}`)
   }
 }
 
-function wait(ms) {
-  return new Promise(resolve => setTimeout(resolve, retryInterval))
-}
-
-const BASE_RETRY_INTERVAL = 1000 // in milliseconds
-const EXPONENTIAL_FACTOR = 2
-const MAX_RETRIES = 5
-
-function retryInterval(retry) {
-  if (retry === 1) return 0
-  return Math.pow(EXPONENTIAL_FACTOR, retry - 1) * BASE_RETRY_INTERVAL
-}
-
-async function notifyWithRetries(channel, url, retry) {
-
-  await wait(retryInterval(retry)) // Will be 0 for the first attempt
-
+/*
+This will launch the worker that will send the notifications
+It expects the following data in the job:
+- work_id: optional, caller's id of the exercise
+- error: false means that the correction has been completed.
+- correction_data: correction or error in case the error field is true
+- callback: URL to call with the results
+*/
+logger.debug(`Finished queue config: ${JSON.stringify(FINISHED_QUEUE_CONFIG)}`)
+new Worker(FINISHED_QUEUE_NAME, async job => {
   try {
-      await notifyURL(url)
-      console.log('Notification sent successfully to', url)
-      channel.ack(msg)
+    logger.info(`Received job: ${JSON.stringify(job.data)}`)
+    const { callback } = job.data
+
+    logger.info(`Sending notification to ${callback}`)
+    await notify(job.data)
+
+    logger.info('Notification sent successfully to', callback)
+    return(`Notification sent to ${callback} at ${new Date().toISOString()}`)
+
   } catch (error) {
-    console.error(error.message)
-
-    if (retries ===  MAX_RETRIES) {
-      console.log(`Max retries reached for ${url}`)
-      return
-    }
-    console.log(`Retrying in  ${retryInterval} milliseconds...`)
-    notifyWithRetries(channel, url, retry + 1)
+    logger.error(`Error sending notification: ${error.message}`)
+    // Throwing an error retries the job, until max attempts are reached
+    throw error
   }
-}
-
-async function mainLoop() {
-  try {
-    const channel = await getMessageChannel()
-
-    console.log('Notifier waiting for RabbitMQ messages...')
-    channel.consume(FINISHED_QUEUE, async (message) => {
-      try {
-        if (message === null) return
-        console.log('Received message:', message.content.toString())
-        const finishedTask = JSON.parse(message.content.toString())
-
-        // TO-DO: Call the URL
-        //notifyWithRetries(channel, finishedTask.url, 1)
-
-        //channel.ack(message)
-      } catch (error) {
-        console.error('Error:', error)
-      }
-    })
-  } catch (error) {
-    console.error('Error:', error)
-  }
-}
-
-mainLoop()
+},FINISHED_QUEUE_CONFIG)

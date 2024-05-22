@@ -1,21 +1,25 @@
-{
-  "env": {
-      "browser": true,
-      "es2021": true,
-      "jest": true,
-      "node": true
-  },
-  "extends": "eslint:recommended",
-  "parserOptions": {
-      "ecmaVersion": 13,
-      "sourceType": "module"
-  },
-  "ignorePatterns": ["**/dist/*"],
-  "noInlineConfig": false,
-  "reportUnusedDisableDirectives": true,
-  // You can check the rules here: https://eslint.org/docs/rules/
-  // If eslint is complaining about a rule not enumerated here, you can ignore it.
-  "rules": {
+import globals from 'globals'
+import js from "@eslint/js"
+
+export default [
+  js.configs.recommended,
+  {
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      globals: {
+        ...globals.browser,
+        ...globals.node
+      },
+    },
+    ignores: ["**/dist/*"],
+    linterOptions: {
+      noInlineConfig: false,
+      reportUnusedDisableDirectives: true,
+    },
+    // You can check the rules here: https://eslint.org/docs/rules/
+    // If eslint is complaining about a rule not enumerated here, you can ignore it.
+    rules: {
       "complexity": ["error", { "max": 6 }],
       "array-callback-return": "error",
       "constructor-super": "error",
@@ -80,5 +84,6 @@
       "require-atomic-updates": "error",
       "use-isnan": "error",
       "valid-typeof": "error"
+    }
   }
-}
+]

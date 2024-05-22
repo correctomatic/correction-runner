@@ -1,5 +1,5 @@
-import initializeDocker from './servers/docker_connection.js'
-import { getDocker } from "./lib/docker.js"
+import initializeDocker from '../src/servers/docker_connection.js'
+import { getDocker } from "../src/lib/docker.js"
 import { Writable } from 'stream'
 
 /*
@@ -24,7 +24,7 @@ I'm sorry this is so poorly documented. I hope this clarifies things a bit. Righ
 
 class MemoryWritableStream extends Writable {
   constructor() {
-    super();
+    super()
     this.buffer = ''
   }
 
@@ -39,28 +39,28 @@ class MemoryWritableStream extends Writable {
 }
 
 async function getContainerLogs(docker, containerIdOrName) {
-  const container = docker.getContainer(containerIdOrName);
+  const container = docker.getContainer(containerIdOrName)
 
   return new Promise((resolve, reject) => {
     container.logs({ follow: true, stdout: true, stderr: true }, (err, stream) => {
       if (err) {
-        reject(err);
-        return;
+        reject(err)
+        return
       }
 
-      const stdout = new MemoryWritableStream();
-      const stderr = new MemoryWritableStream();
+      const stdout = new MemoryWritableStream()
+      const stderr = new MemoryWritableStream()
       container.modem.demuxStream(stream, stdout, stderr)
 
       stream.on('end', async () => {
         resolve(stdout.content() + stderr.content())
-      });
+      })
 
       stream.on('error', (err) => {
-        reject(err);
-      });
-    });
-  });
+        reject(err)
+      })
+    })
+  })
 }
 
 

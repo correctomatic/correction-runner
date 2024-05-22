@@ -1,57 +1,52 @@
-import dotenv from 'dotenv'
-dotenv.config()
+import { Queue, Worker } from 'bullmq'
+import env from './config/env.js'
+
+import mainLogger from './lib/logger.js'
+import {
+  PENDING_QUEUE_NAME,
+  PENDING_QUEUE_CONFIG,
+  RUNNING_QUEUE_NAME,
+  RUNNING_QUEUE_CONFIG,
+} from './config/bullmq.js'
 
 import initializeDocker from './servers/docker_connection.js'
-import {
-  PENDING_QUEUE, RUNNING_QUEUE,
-  getMessageChannel
-}  from './servers/rabbitmq_connection.js'
 import { launchCorrectionContainer} from './lib/docker.js'
 
-function checkServerLoad() {
-  // TO-DO: Implement server load checking
-  return true
-}
+const logger = mainLogger.child({ module: 'correction_starter' })
+logger.debug(`Environment: ${JSON.stringify(env)}`)
 
-function putInRunningQueue(channel, work_id, containerId, callback) {
-  const runningTask = {
+// The queue is opened only once, when the server starts
+const runningQueue = new Queue(RUNNING_QUEUE_NAME,RUNNING_QUEUE_CONFIG)
+
+async function putInRunningQueue(jobName, work_id, containerId, callback) {
+  const jobData = {
     work_id: work_id,
-    id: containerId,
+    container_id: containerId,
     callback: callback
+    // file_hash: file_hash // TO-DO: add file_hash
   }
-  const message = Buffer.from(JSON.stringify(runningTask))
-  channel.sendToQueue(RUNNING_QUEUE, message, { persistent: true })
-  console.log('Message sent to running queue')
+  await runningQueue.add(jobName, jobData)
+  logger.debug(`Message sent to running queue: ${JSON.stringify(jobData)}`)
 }
 
-async function mainLoop() {
-  try {
-    const channel = await getMessageChannel()
-
-    console.log('Starter waiting for RabbitMQ messages...')
-    channel.consume(PENDING_QUEUE, async (message) => {
-      try {
-        if (message === null) return
-        console.log('Received message:', message.content.toString())
-        const pendingTask = JSON.parse(message.content.toString())
-
-        if (!checkServerLoad()) {
-          console.log('Server is overloaded, waiting...')
-          return
-        }
-
-        const containerId = await launchCorrectionContainer(pendingTask.image, pendingTask.file)
-        putInRunningQueue(channel, pendingTask.work_id, containerId, pendingTask.callback)
-        channel.ack(message)
-      } catch (error) {
-        console.error('Error:', error)
-      }
-    })
-  } catch (error) {
-    console.error('Error:', error)
-  }
-}
-
-console.log('Starting correction starter...')
+logger.info('Starting correction starter...')
 initializeDocker()
-mainLoop()
+
+logger.debug(`Pending queue config: ${JSON.stringify(PENDING_QUEUE_CONFIG)}`)
+new Worker(PENDING_QUEUE_NAME, async job => {
+  try {
+    logger.info(`Received job: ${JSON.stringify(job.data)}`)
+    const { work_id, image, file, callback } = job.data
+
+    const containerId = await launchCorrectionContainer(image, file, logger)
+    await putInRunningQueue(job.name, work_id, containerId, callback)
+
+    logger.info(`Correction started. Container: ${containerId}`)
+    return `Correction started at ${new Date().toISOString()}`
+
+  } catch (error) {
+    logger.error(`Error: ${error.message}`)
+    // TODO: this should go to a queue for notifying the error
+    throw error
+  }
+},PENDING_QUEUE_CONFIG)
