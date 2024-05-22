@@ -1,4 +1,5 @@
-import { canonicalize } from 'json-canonicalize';
+import axios from 'axios'
+import { canonicalize } from 'json-canonicalize'
 
 import { Worker } from 'bullmq'
 import env from './config/env.js'
@@ -8,6 +9,11 @@ import {
   FINISHED_QUEUE_NAME,
   FINISHED_QUEUE_CONFIG
 } from './config/bullmq.js'
+
+// Connection timeout for notifications
+const CONNECTION_TIMEOUT = 5000
+
+const LOCK_TOKEN = 'correction_notifier'
 
 const logger = mainLogger.child({ module: 'correction_notifier' })
 logger.debug(`Environment: ${JSON.stringify(env)}`)
@@ -45,48 +51,91 @@ function buildNotificationData(jobData) {
   }
 }
 
-async function notify(jobData) {
-  const { callback: url } = jobData
-
-  const notificationData = buildNotificationData(jobData)
-  const signedNotificationData = signResponse(notificationData)
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(signedNotificationData),
-  })
-
-  if(!response.ok) {
-    throw new Error(`Failed to send notification to ${url}. Status: ${response.status}`)
-  }
-}
-
 /*
-This will launch the worker that will send the notifications
+This will launch the proces that will send the notifications. We could have multiple
+processes running at the same time, each one will send a notification for a job.
+
 It expects the following data in the job:
 - work_id: optional, caller's id of the exercise
 - error: false means that the correction has been completed.
 - correction_data: correction or error in case the error field is true
 - callback: URL to call with the results
 */
-logger.debug(`Finished queue config: ${JSON.stringify(FINISHED_QUEUE_CONFIG)}`)
-new Worker(FINISHED_QUEUE_NAME, async job => {
+async function notify(job) {
+  const { callback: url } = job.data
+
+  logger.info(`Sending notification to ${url}`)
+  const notificationData = buildNotificationData(job.data)
+  const signedNotificationData = signResponse(notificationData)
+
   try {
-    logger.info(`Received job: ${JSON.stringify(job.data)}`)
-    const { callback } = job.data
 
-    logger.info(`Sending notification to ${callback}`)
-    await notify(job.data)
+    const response = await axios.post(url, signedNotificationData, {
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      CONNECTION_TIMEOUT
+    })
 
-    logger.info('Notification sent successfully to', callback)
-    return(`Notification sent to ${callback} at ${new Date().toISOString()}`)
+    if(!response.ok) {
+      const errorMessage = `Error sending notification to ${url}. Status: ${response.status}`
+      logger.error(errorMessage)
+      throw new Error(errorMessage)
+    }
+
+    const successMessage = `Notification sent to ${url}. Status: ${response.status}`
+    logger.info(successMessage)
+    job.moveToCompleted(successMessage, LOCK_TOKEN, false)
 
   } catch (error) {
-    logger.error(`Error sending notification: ${error.message}`)
-    // Throwing an error retries the job, until max attempts are reached
+    logger.error(`Error sending notification to ${url}: ${error.message}`)
     throw error
   }
-},FINISHED_QUEUE_CONFIG)
+}
+
+async function runWorker(worker) {
+  let job
+
+  try {
+    await worker.startStalledCheckTimer()
+    job = (await worker.getNextJob(LOCK_TOKEN))
+    if(!job) return
+
+    logger.info(`Received finished job: ${JSON.stringify(job.data)}. Launching notification.`)
+
+    // Note that we do NOT await the notification, we just launch it
+    // Multiple notifications can be launched at the same time
+    notify(job)
+
+  } catch (error) {
+    logger.error(`Error: ${JSON.stringify(error.message)}`)
+    throw error
+  }
+}
+
+async function listenForFinishedQueue() {
+  // We need to set the lock duration to a value higher than the connection timeout
+  const LOCK_DURATION = 2*CONNECTION_TIMEOUT
+  logger.info(`Listening for finished queue jobs. Lock duration: ${LOCK_DURATION}ms`)
+
+  const queueOptions = {
+    ...FINISHED_QUEUE_CONFIG,
+    lockDuration: LOCK_DURATION
+  }
+  const worker = new Worker(FINISHED_QUEUE_NAME, null, queueOptions)
+
+  while(true) {
+    // This pauses the loop, it doesn't run all the time.
+    // It's executed ~ 2secs if there are no pending jobs.
+    // If a running job enters, it's executed inmediately.
+    // eslint-disable-next-line no-await-in-loop
+    await runWorker(worker)
+  }
+}
+
+listenForFinishedQueue()
+
+
+
+
+

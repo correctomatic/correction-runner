@@ -46,6 +46,12 @@ const RUNNING_QUEUE_CONFIG = {
 // ---------------------------------------------------------
 const FINISHED_QUEUE_CONFIG = {
   connection: redisConfig,
+  // Max 20 notifications per second
+  limiter: {
+    max: 20,
+    duration: 1000,
+  },
+  // The notifications are retried
   defaultJobOptions: {
     attempts: 5, // Number of attempts before failing
     backoff: {

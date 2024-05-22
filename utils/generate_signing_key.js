@@ -9,7 +9,7 @@ const passphrase = 'banana'
 const encryptedPrivateKey = createPrivateKey({
   key: keypair.privateKey.export({ type: 'pkcs8', format: 'pem' }),
   passphrase: passphrase
-});
+})
 
 // fs.writeFileSync('privateKey.pem', keypair.privateKey.export({ type: 'pkcs8', format: 'pem' }))
 fs.writeFileSync('privateKey.pem', encryptedPrivateKey.export({ type: 'pkcs8', format: 'pem' }))
