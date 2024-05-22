@@ -89,7 +89,7 @@ async function notify(job) {
 
   } catch (error) {
     logger.error(`Error sending notification to ${url}: ${error.message}`)
-    throw error
+    job.moveToFailed(error.message)
   }
 }
 
