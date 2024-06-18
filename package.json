@@ -8,8 +8,10 @@
   "scripts": {
     "starter": "nodemon src/correction_starter.js",
     "completer": "nodemon src/correction_completer.js",
+    "notifier": "nodemon src/correction_notifier.js",
     "dev:starter": "NODE_ENV=development nodemon src/correction_starter.js | npx pino-pretty",
-    "dev:completer": "nodemon src/correction_completer.js",
+    "dev:completer": "NODE_ENV=development nodemon src/correction_completer.js",
+    "dev:notifier": "NODE_ENV=development nodemon src/correction_notifier.js",
     "lint": "eslint ./src"
   },
   "devDependencies": {
