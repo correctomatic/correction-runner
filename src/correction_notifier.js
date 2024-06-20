@@ -53,10 +53,8 @@ async function notify(jobData) {
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-        'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(signedNotificationData),
+    headers: { 'Content-Type': 'application/json' },
+    body: signedNotificationData,
   })
 
   if(!response.ok) {
