@@ -3,14 +3,14 @@ import { canonicalize } from 'json-canonicalize'
 import { Worker } from 'bullmq'
 import env from './config/env.js'
 
-import mainLogger from './lib/logger.js'
+import mainLogger, { clearSensitiveFields } from './lib/logger.js'
 import {
   FINISHED_QUEUE_NAME,
   FINISHED_QUEUE_CONFIG
 } from './config/bullmq.js'
 
 const logger = mainLogger.child({ module: 'correction_notifier' })
-logger.debug(`Environment: ${JSON.stringify(env)}`)
+logger.debug(`Environment: ${JSON.stringify(clearSensitiveFields(env))}`)
 
 /*
 We have two types of responses:
@@ -70,7 +70,7 @@ It expects the following data in the job:
 - correction_data: correction or error in case the error field is true
 - callback: URL to call with the results
 */
-logger.debug(`Finished queue config: ${JSON.stringify(FINISHED_QUEUE_CONFIG)}`)
+logger.debug(`Finished queue config: ${JSON.stringify(clearSensitiveFields(FINISHED_QUEUE_CONFIG))}`)
 logger.info(`Starting ${env.bullmq.CONCURRENT_NOTIFIERS} concurrent notifiers`)
 new Worker(FINISHED_QUEUE_NAME, async job => {
   try {

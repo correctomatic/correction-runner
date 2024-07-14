@@ -1,7 +1,7 @@
 import { Queue, Worker } from 'bullmq'
 import env from './config/env.js'
 
-import mainLogger from './lib/logger.js'
+import mainLogger, { clearSensitiveFields } from './lib/logger.js'
 import {
   PENDING_QUEUE_NAME,
   PENDING_QUEUE_CONFIG,
@@ -13,15 +13,11 @@ import initializeDocker from './servers/docker_connection.js'
 import { launchCorrectionContainer} from './lib/docker.js'
 
 const logger = mainLogger.child({ module: 'correction_starter' })
-logger.debug(`Environment: ${JSON.stringify(env)}`)
+logger.debug(`Environment: ${JSON.stringify(clearSensitiveFields(env))}`)
 
 logger.info('Starting correction starter...')
 await initializeDocker(logger)
 
-// Debug: exit
-process.exit(0)
-
-// TO-DO: test
 // Capture CTRL+C
 process.on('SIGINT', () => {
   logger.info('Captured SIGINT, exiting...')
@@ -42,7 +38,7 @@ async function putInRunningQueue(jobName, work_id, containerId, callback) {
   logger.debug(`Message sent to running queue: ${JSON.stringify(jobData)}`)
 }
 
-logger.debug(`Pending queue config: ${JSON.stringify(PENDING_QUEUE_CONFIG)}`)
+logger.debug(`Pending queue config: ${JSON.stringify(clearSensitiveFields(PENDING_QUEUE_CONFIG))}`)
 new Worker(PENDING_QUEUE_NAME, async job => {
   try {
     logger.info(`Received job: ${JSON.stringify(job.data)}`)

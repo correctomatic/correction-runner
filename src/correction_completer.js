@@ -1,7 +1,7 @@
 import { Queue, Worker } from 'bullmq'
 import Ajv from 'ajv'
 
-import mainLogger from './lib/logger.js'
+import mainLogger, { clearSensitiveFields } from './lib/logger.js'
 import env from './config/env.js'
 
 import initializeDocker from './servers/docker_connection.js'
@@ -99,7 +99,7 @@ Maybe we should add a mechanism to refresh the locks, but it's not necessary for
 */
 
 const logger = mainLogger.child({ module: 'correction_starter' })
-logger.debug(`Environment: ${JSON.stringify(env)}`)
+logger.debug(`Environment: ${JSON.stringify(clearSensitiveFields(env))}`)
 
 // Works in running queue that are not yet finished
 const runningJobs = []

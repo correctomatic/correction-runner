@@ -1,4 +1,4 @@
-import fs from 'fs';
+import fs from 'fs'
 
 import {initializeDockerode } from '../lib/docker.js'
 import env from '../config/env.js'
@@ -23,12 +23,12 @@ async function initializeDocker(logger=console) {
 
     const optionsWithFiles = { ...options }
     const fileAttributes = ['cert', 'key', 'ca', 'sshOptions.privateKey']
-    
+
     for(const attribute of fileAttributes) {
       if(!options[`${attribute}`]) continue
 
       try {
-        optionsWithFiles[attribute] = fs.readFileSync(options[attribute]);
+        optionsWithFiles[attribute] = fs.readFileSync(options[attribute])
       } catch (error) {
         const errorText = `Error reading file for attribute "${attribute}": ${error.message}`
         logAndRethrow(errorText, logger)
