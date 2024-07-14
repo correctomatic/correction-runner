@@ -49,7 +49,7 @@ async function withTimeout(millis, promise) {
 
 let docker = null
 
-async function initializeDocker(dockerServer, logger = console) {
+async function initializeDockerode(dockerServer, logger = console) {
   if(docker) return // Already initialized
   try {
     docker = new Dockerode(dockerServer)
@@ -149,7 +149,7 @@ async function createCorrectionContainer(image, file, logger = defaultLogger){
 async function launchCorrectionContainer(image, file, logger = defaultLogger) {
   const container = await createCorrectionContainer(image, file)
   try {
-    // TESTING: I'M STARTING CONTAINERS BY HAND
+    // The next conditional is for helping with testing
     if(env.docker.DONT_START_CONTAINER) return container.id
     logger.debug(`Starting container with id ${container.id}`)
     await container.start()
@@ -162,7 +162,7 @@ async function launchCorrectionContainer(image, file, logger = defaultLogger) {
 }
 
 export {
-  initializeDocker,
+  initializeDockerode,
   getDocker,
   launchCorrectionContainer,
   getContainerLogs

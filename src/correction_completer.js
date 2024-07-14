@@ -296,6 +296,6 @@ async function listenForContainerCompletion() {
 }
 
 logger.info('Starting correction completer...')
-initializeDocker()
+await initializeDocker(logger)
 listenForRunningQueue()
 listenForContainerCompletion()

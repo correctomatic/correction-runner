@@ -50,6 +50,29 @@ TO-DO
 
 You have the schema of the required response in the `src\schemas\container_response_schema.json` file.
 
+## Configuration
+
+TO-DO
+
+```sh
+# NODE_ENV=development
+# LOG_LEVEL=debug
+# LOG_FILE=/tmp/correctomatic.log
+
+# Environment variables for redis, needed by bullMQ
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD="<redis password>"
+
+# Number of concurrent jobs sending notifications of completed tasks
+CONCURRENT_NOTIFIERS=10
+
+# Temporary environment variable to prevent starting the container, for debugging the completer
+DONT_START_CONTAINER=S
+```
+
+
+
 ## Security
 
 Take in account that there is no security implemented in this system. Anyone can send a message to the `pending_corrections` queue and it will be processed. You should implement some kind of security in the API that sends the messages to the queue.
@@ -93,7 +116,7 @@ TO-DO
 
 ### Generate a pair of keys
 
-TO-DO
+TO-DO: currently not working
 
 You can generate a pair of keys to sign the JWT tokens with the script `utils\generate_keys.js`. It will generate the files `privateKey.pem` and `publicKey.pem` in the root directory. The private key will be encripted with the password `PRIVATE_KEY_PASSWORD` defined in the `.env` file.
 
@@ -147,71 +170,3 @@ yarn completer
   - `callback`: URL to call with the results
 
 
-
-### Notes for BullMQ
-
-
-
-
-
-## bullMQ information
-
-
-Redis keys:
-
-
-### `bull:<queueName>:meta` - hash
-Queue configuration?
-Keys I've seen:
-- opts.maxLenEvents
-
-### `bull:<queueName>:marker` - sorted set
-- ¿?
-
-### `bull:<queueName>:id` - string
-"autoincrement" id for the jobs
-
-### `bull:<queueName>:wait` - list
-ids of the jobs that are waiting to be processed (in reverse order?)
-
-### `bull:<queueName>:stalled` - list
-stalled jobs - jobs that have been in the active list for too long
-It seems that `worker.startStalledCheckTimer()` is the call that moves the jobs to this list
-
-### `bull:<queueName>:active` - list
-ids of active jobs
-When a job is being processed, it is moved from the wait list to the active list
-
-### `bull:<queueName>:completed` - list
-ids and timestamp of completed jobs
-
-### `bull:<queueName>:stalled-check` - string
-timestamp of the last time the stalled jobs were checked?
-
-### `bull:<queueName>:<job id>` - hash
-Information for a job in the queue.
-It's not deleted when the job is finished. How do we clean this?
-
-- name
-- data
-- opts
-- timestamp
-- delay
-- priority
-- processedOn (timestamp)
-- ats ¿?
-- atm?
-- returnvalue
-- finishedOn (timestamp)
-
-### `bull:<queueName>:<jobid>:lock` - string
-The token of the worker that is processing the job
-
-### `bull:<queueName>:events` - stream
-Events happening in the queue. Seen so far:
-- added
-- waiting
-- active: when a worker takes the job
-- completed
-- stalled
-- drained ¿?

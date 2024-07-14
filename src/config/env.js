@@ -23,7 +23,7 @@ export default {
   },
 
   docker: {
-    DOCKER_SERVER: process.env.DOCKER_SERVER,
+    DOCKER_OPTIONS: process.env.DOCKER_OPTIONS || '{"socketPath": "/var/run/docker.sock"}',
     DONT_START_CONTAINER: process.env.DONT_START_CONTAINER == 'S',
   },
 

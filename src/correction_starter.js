@@ -15,6 +15,19 @@ import { launchCorrectionContainer} from './lib/docker.js'
 const logger = mainLogger.child({ module: 'correction_starter' })
 logger.debug(`Environment: ${JSON.stringify(env)}`)
 
+logger.info('Starting correction starter...')
+await initializeDocker(logger)
+
+// Debug: exit
+process.exit(0)
+
+// TO-DO: test
+// Capture CTRL+C
+process.on('SIGINT', () => {
+  logger.info('Captured SIGINT, exiting...')
+  process.exit(0)
+})
+
 // The queue is opened only once, when the server starts
 const runningQueue = new Queue(RUNNING_QUEUE_NAME,RUNNING_QUEUE_CONFIG)
 
@@ -28,9 +41,6 @@ async function putInRunningQueue(jobName, work_id, containerId, callback) {
   await runningQueue.add(jobName, jobData)
   logger.debug(`Message sent to running queue: ${JSON.stringify(jobData)}`)
 }
-
-logger.info('Starting correction starter...')
-initializeDocker()
 
 logger.debug(`Pending queue config: ${JSON.stringify(PENDING_QUEUE_CONFIG)}`)
 new Worker(PENDING_QUEUE_NAME, async job => {
