@@ -19,7 +19,7 @@ class TimeoutError extends Error {}
 const EXERCISE_FILE_IN_CONTAINER = '/tmp/exercise'
 
 const DEFAULT_OPTIONS = {
-  connectionTimeout: 2000
+  connectionTimeout: env.docker.DOCKER_TIMEOUT
 }
 
 function envVars(parameters) { return Object.entries(parameters).map(([key, value]) => `${key}=${value}`) }

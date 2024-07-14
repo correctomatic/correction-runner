@@ -6,6 +6,9 @@ const DEFAULT_ENVIRONMENT = 'production'
 const DEFAULT_LOG_LEVEL = 'info'
 const DEFAULT_LOG_FILE = 'correctomatic.log'
 
+const DEFAULT_DOCKER_TIMEOUT = 5000
+const DEFAULT_DOCKER_OPTIONS = '{"socketPath": "/var/run/docker.sock"}'
+
 const DEFAULT_CONCURRENT_NOTIFIERS = 50
 
 export default {
@@ -23,7 +26,8 @@ export default {
   },
 
   docker: {
-    DOCKER_OPTIONS: process.env.DOCKER_OPTIONS || '{"socketPath": "/var/run/docker.sock"}',
+    DOCKER_TIMEOUT: Number(process.env.DOCKER_TIMEOUT || DEFAULT_DOCKER_TIMEOUT),
+    DOCKER_OPTIONS: process.env.DOCKER_OPTIONS || DEFAULT_DOCKER_OPTIONS,
     DONT_START_CONTAINER: process.env.DONT_START_CONTAINER == 'S',
   },
 
