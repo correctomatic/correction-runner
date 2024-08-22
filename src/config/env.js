@@ -21,7 +21,7 @@ function stringToBoolean(stringValue){
       case "yes":
       case "1":
       case "y":
-        return true;
+        return true
 
       case "false":
       case "no":
@@ -30,10 +30,10 @@ function stringToBoolean(stringValue){
       case "":
       case null:
       case undefined:
-        return false;
+        return false
 
       default:
-        return false;
+        return false
   }
 }
 

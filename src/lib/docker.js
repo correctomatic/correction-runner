@@ -18,10 +18,6 @@ class TimeoutError extends Error {}
 // **************************************************************************
 const EXERCISE_FILE_IN_CONTAINER = '/tmp/exercise'
 
-const DEFAULT_OPTIONS = {
-  connectionTimeout: env.docker.DOCKER_TIMEOUT
-}
-
 function envVars(parameters) { return Object.entries(parameters).map(([key, value]) => `${key}=${value}`) }
 function generateBind(exerciseFile) {
   return [`${exerciseFile}:${EXERCISE_FILE_IN_CONTAINER}`]
@@ -110,12 +106,57 @@ async function getContainerLogs(container) {
   })
 }
 
-async function createContainer(image, connectionTimeout = DEFAULT_OPTIONS.connectionTimeout, binds = [], env = {}) {
+// New function to ensure the image is pulled if not available
+async function ensureImagePulled(image, logger = defaultLogger) {
   try {
-    const container = await withTimeout(connectionTimeout, getDocker().createContainer({
+    const images = await getDocker().listImages({ filters: { reference: [image] } })
+
+    if (images.length === 0) {
+      logger.info(`Image ${image} not found locally. Pulling...`)
+      await new Promise((resolve, reject) => {
+        getDocker().pull(image, (err, stream) => {
+          function onFinished(err) {
+            if (err) return reject(err)
+            resolve()
+          }
+
+          function onProgress(event) {
+            logger.debug(event)
+          }
+
+          if (err) return reject(err)
+          getDocker().modem.followProgress(stream, onFinished, onProgress)
+        })
+      })
+      logger.info(`Image ${image} pulled successfully.`)
+    } else {
+      logger.info(`Image ${image} already exists locally.`)
+    }
+  } catch (e) {
+    logger.error(`Failed to ensure image ${image} is pulled: ${e.message}`)
+    throw e
+  }
+}
+
+
+// Most of the complexity is in the optional parameters
+async function createContainer(image,options = {},logger = defaultLogger) {
+
+  const defaultOptions = {
+    binds: [],
+    environment: {},
+    connectionTimeout: env.docker.DOCKER_TIMEOUT,
+    pullTimeout: env.docker.DOCKER_PULL_TIMEOUT
+  }
+  options = { ...defaultOptions, ...options }
+
+  try {
+    if(options.pull) await withTimeout(options.pullTimeout, ensureImagePulled(image, logger))
+
+    const container = await withTimeout(options.connectionTimeout, getDocker().createContainer({
       Image: image,
       name: generateContainerName(),
-      Env: envVars(env),
+      Env: envVars(options.environment),
       AttachStdin: false,
       AttachStdout: true,
       AttachStderr: true,
@@ -123,7 +164,7 @@ async function createContainer(image, connectionTimeout = DEFAULT_OPTIONS.connec
       HostConfig: {
         // AutoRemove: true,
         AutoRemove: false,
-        Binds: binds
+        Binds: options.binds
       },
       // For testing errors starting the container. This will fail on start
       // Entrypoint: ['/your/entrypoint'], // Specify the entrypoint
@@ -135,12 +176,21 @@ async function createContainer(image, connectionTimeout = DEFAULT_OPTIONS.connec
 }
 
 async function createCorrectionContainer(image, file, logger = defaultLogger){
-  const connectionTimeout = DEFAULT_OPTIONS.connectionTimeout
+  const connectionTimeout = env.docker.DOCKER_TIMEOUT
+  const pullTimeout = env.docker.DOCKER_PULL_TIMEOUT
+  const pull = env.docker.DOCKER_PULL
+
   const binds = generateBind(file)
   logger.debug(`Creating container with image ${image} and binds ${binds}`)
 
+  const createOptions = {
+    binds,
+    pull,
+    connectionTimeout,
+    pullTimeout
+  }
   const container = await createContainer(
-    image, connectionTimeout, binds
+    image, createOptions, logger
   )
 
   return container
