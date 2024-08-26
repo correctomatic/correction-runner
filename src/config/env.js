@@ -43,7 +43,11 @@ function stringToBoolean(stringValue){
 
 
 function dockerOptions() {
-  return parseJSONEnvVar(process.env.DOCKER_OPTIONS) || DEFAULT_DOCKER_OPTIONS
+  // Env var has precedence over file
+  if(process.env.DOCKER_OPTIONS) return parseJSONEnvVar(process.env.DOCKER_OPTIONS) || DEFAULT_DOCKER_OPTIONS
+  if(process.env.DOCKER_OPTIONS_FILE) return readJSONFile(process.env.DOCKER_OPTIONS_FILE)
+
+  return DEFAULT_DOCKER_OPTIONS
 }
 
 function repositoryCredentials() {

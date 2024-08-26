@@ -15,18 +15,8 @@ function mergeDeep(target, source) {
 }
 
 function readJSONFile(filePath) {
-  let fileContent
-  try {
-    fileContent = fs.readFileSync(filePath, 'utf8')
-  } catch (e) {
-    throw(`Failed to read configuration file ${filePath}`, e)
-  }
-
-  try {
-    return JSON.parse(fileContent)
-  } catch (e) {
-    throw(`Failed to parse configuration file ${filePath}`, e)
-  }
+  const fileContent = fs.readFileSync(filePath, 'utf8')
+  return JSON.parse(fileContent)
 }
 
 function parseJSONEnvVar(envVar) {
