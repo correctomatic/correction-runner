@@ -52,26 +52,11 @@ You have the schema of the required response in the `src\schemas\container_respo
 
 ## Configuration
 
-TO-DO
+The system is configured through environment variables. You can set them in a `.env` file in the root directory of the project. There is a `.env.example` file with the variables needed by the system. Not all of them are needed by all the components, so you can remove the ones that are not needed.
 
-```sh
-# NODE_ENV=development
-# LOG_LEVEL=debug
-# LOG_FILE=/tmp/correctomatic.log
+The default values are in the `src\config\env.js` file.
 
-# Environment variables for redis, needed by bullMQ
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD="<redis password>"
-
-# Number of concurrent jobs sending notifications of completed tasks
-CONCURRENT_NOTIFIERS=10
-
-# Temporary environment variable to prevent starting the container, for debugging the completer
-DONT_START_CONTAINER=S
-```
-
-
+You can also set them in the environment where you are running the system and not use the `.env` file.
 
 ## Security
 

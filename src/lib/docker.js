@@ -23,6 +23,17 @@ function generateBind(exerciseFile) {
   return [`${exerciseFile}:${EXERCISE_FILE_IN_CONTAINER}`]
 }
 
+function extractRegistryURL(imageName) {
+  const parts = imageName.split('/');
+
+  // The registry name is usually the first part and contains a dot (.) or a colon (:)
+  if (parts.length > 1 && (parts[0].includes('.') || parts[0].includes(':'))) {
+      return parts[0];
+  }
+
+  return '';
+}
+
 // Credit: https://stackoverflow.com/questions/32461271/nodejs-timeout-a-promise-if-failed-to-complete-in-time
 async function withTimeout(millis, promise) {
   let timeoutPid
@@ -106,6 +117,13 @@ async function getContainerLogs(container) {
   })
 }
 
+function getRepositoryCredentials(image) {
+  const registryURL = extractRegistryURL(image)
+
+  const credentials = env.docker.DOCKER_REPOSITORY_CREDENTIALS[registryURL]
+  return credentials || {}
+}
+
 // New function to ensure the image is pulled if not available
 async function ensureImagePulled(image, logger = defaultLogger) {
   try {
@@ -113,8 +131,14 @@ async function ensureImagePulled(image, logger = defaultLogger) {
 
     if (images.length === 0) {
       logger.info(`Image ${image} not found locally. Pulling...`)
+
+      const registryCredentials = getRepositoryCredentials(image)
+      if (registryCredentials) logger.debug(`Using registry credentials: ${JSON.stringify(registryCredentials)}`)
+
       await new Promise((resolve, reject) => {
-        getDocker().pull(image, (err, stream) => {
+        // Dockerode pull resolves before the image is actually pulled
+        // We need to use the onFinished callback to know when it's done
+        getDocker().pull(image, { authconfig: registryCredentials }, (err, stream) => {
           function onFinished(err) {
             if (err) return reject(err)
             resolve()
@@ -137,7 +161,6 @@ async function ensureImagePulled(image, logger = defaultLogger) {
     throw e
   }
 }
-
 
 // Most of the complexity is in the optional parameters
 async function createContainer(image,options = {},logger = defaultLogger) {

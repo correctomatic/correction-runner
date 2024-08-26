@@ -1,16 +1,20 @@
 import dotenv from 'dotenv'
 dotenv.config()
 
+import { parseJSONEnvVar, readJSONFile, mergeDeep } from '../lib/config.js'
+
 const DEFAULT_ENVIRONMENT = 'production'
 
 const DEFAULT_LOG_LEVEL = 'info'
 const DEFAULT_LOG_FILE = 'correctomatic.log'
 
-const DEFAULT_DOCKER_PULL='N'
+
 const DEFAULT_DONT_START_CONTAINER='N'
 const DEFAULT_DOCKER_TIMEOUT = 5000
-const DEFAULT_DOCKER_PULL_TIMEOUT = 15000
 const DEFAULT_DOCKER_OPTIONS = '{"socketPath": "/var/run/docker.sock"}'
+const DEFAULT_DOCKER_PULL='N'
+const DEFAULT_DOCKER_PULL_TIMEOUT = 15000
+const DEFAULT_DOCKER_REPOSITORY_CREDENTIALS = {}
 
 const DEFAULT_CONCURRENT_NOTIFIERS = 50
 
@@ -37,6 +41,20 @@ function stringToBoolean(stringValue){
   }
 }
 
+
+function dockerOptions() {
+  return parseJSONEnvVar(process.env.DOCKER_OPTIONS) || DEFAULT_DOCKER_OPTIONS
+}
+
+function repositoryCredentials() {
+  let fileCredentials = {}
+  if(process.env.DOCKER_REPOSITORY_CREDENTIALS_FILE){
+    fileCredentials = readJSONFile(process.env.DOCKER_REPOSITORY_CREDENTIALS_FILE)
+  }
+  const envCredentials = parseJSONEnvVar(process.env.DOCKER_REPOSITORY_CREDENTIALS) || DEFAULT_DOCKER_REPOSITORY_CREDENTIALS
+  return mergeDeep(fileCredentials, envCredentials)
+}
+
 export default {
   ENVIRONMENT: process.env.NODE_ENV || DEFAULT_ENVIRONMENT,
 
@@ -53,9 +71,10 @@ export default {
 
   docker: {
     DOCKER_TIMEOUT: Number(process.env.DOCKER_TIMEOUT || DEFAULT_DOCKER_TIMEOUT),
+    DOCKER_OPTIONS: dockerOptions(),
     DOCKER_PULL: stringToBoolean(process.env.DOCKER_PULL || DEFAULT_DOCKER_PULL),
     DOCKER_PULL_TIMEOUT: Number(process.env.DOCKER_PULL_TIMEOUT || DEFAULT_DOCKER_PULL_TIMEOUT),
-    DOCKER_OPTIONS: process.env.DOCKER_OPTIONS || DEFAULT_DOCKER_OPTIONS,
+    DOCKER_REPOSITORY_CREDENTIALS: repositoryCredentials(),
     DONT_START_CONTAINER: stringToBoolean(process.env.DONT_START_CONTAINER || DEFAULT_DONT_START_CONTAINER),
   },
 
