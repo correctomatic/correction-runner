@@ -16,7 +16,7 @@ function mergeDeep(target, source) {
 
 function readFile(filePath) {
   const fileContent = fs.readFileSync(filePath, 'utf8')
-  return JSON.parse(fileContent)
+  return fileContent
 }
 
 export {

@@ -119,9 +119,8 @@ async function getContainerLogs(container) {
 
 function getRepositoryCredentials(image) {
   const registryURL = extractRegistryURL(image)
-
-  const credentials = env.docker.DOCKER_REGISTRY_CREDENTIALS[registryURL]
-  return credentials || {}
+  
+  return env.docker.DOCKER_REGISTRY_CREDENTIALS[registryURL] || {}
 }
 
 // New function to ensure the image is pulled if not available
@@ -141,6 +140,7 @@ async function ensureImagePulled(image, logger = defaultLogger) {
         getDocker().pull(image, { authconfig: registryCredentials }, (err, stream) => {
           function onFinished(err) {
             if (err) return reject(err)
+            logger.info(`Image ${image} pulled successfully.`)
             resolve()
           }
 
@@ -152,7 +152,7 @@ async function ensureImagePulled(image, logger = defaultLogger) {
           getDocker().modem.followProgress(stream, onFinished, onProgress)
         })
       })
-      logger.info(`Image ${image} pulled successfully.`)
+
     } else {
       logger.info(`Image ${image} already exists locally.`)
     }

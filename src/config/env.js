@@ -14,7 +14,7 @@ const DEFAULT_DOCKER_TIMEOUT = 5000
 const DEFAULT_DOCKER_OPTIONS = '{"socketPath": "/var/run/docker.sock"}'
 const DEFAULT_DOCKER_PULL='N'
 const DEFAULT_DOCKER_PULL_TIMEOUT = 15000
-const DEFAULT_DOCKER_REGISTRY_CREDENTIALS = {}
+const DEFAULT_DOCKER_REGISTRY_CREDENTIALS = "{}"
 
 const DEFAULT_CONCURRENT_NOTIFIERS = 50
 
@@ -53,9 +53,9 @@ function dockerOptions() {
 function repositoryCredentials() {
   let fileCredentials = {}
   if(process.env.DOCKER_REGISTRY_CREDENTIALS_FILE){
-    fileCredentials = readFile(process.env.DOCKER_REGISTRY_CREDENTIALS_FILE)
+    fileCredentials = JSON.parse(readFile(process.env.DOCKER_REGISTRY_CREDENTIALS_FILE))
   }
-  const envCredentials = process.env.DOCKER_REGISTRY_CREDENTIALS || DEFAULT_DOCKER_REGISTRY_CREDENTIALS
+  const envCredentials = JSON.parse(process.env.DOCKER_REGISTRY_CREDENTIALS || DEFAULT_DOCKER_REGISTRY_CREDENTIALS)
   return mergeDeep(fileCredentials, envCredentials)
 }
 
