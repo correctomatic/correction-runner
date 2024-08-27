@@ -1,7 +1,7 @@
 import dotenv from 'dotenv'
 dotenv.config()
 
-import { parseJSONEnvVar, readJSONFile, mergeDeep } from '../lib/config.js'
+import { readFile, mergeDeep } from '../lib/config.js'
 
 const DEFAULT_ENVIRONMENT = 'production'
 
@@ -14,7 +14,7 @@ const DEFAULT_DOCKER_TIMEOUT = 5000
 const DEFAULT_DOCKER_OPTIONS = '{"socketPath": "/var/run/docker.sock"}'
 const DEFAULT_DOCKER_PULL='N'
 const DEFAULT_DOCKER_PULL_TIMEOUT = 15000
-const DEFAULT_DOCKER_REPOSITORY_CREDENTIALS = {}
+const DEFAULT_DOCKER_REGISTRY_CREDENTIALS = {}
 
 const DEFAULT_CONCURRENT_NOTIFIERS = 50
 
@@ -44,18 +44,18 @@ function stringToBoolean(stringValue){
 
 function dockerOptions() {
   // Env var has precedence over file
-  if(process.env.DOCKER_OPTIONS) return parseJSONEnvVar(process.env.DOCKER_OPTIONS) || DEFAULT_DOCKER_OPTIONS
-  if(process.env.DOCKER_OPTIONS_FILE) return readJSONFile(process.env.DOCKER_OPTIONS_FILE)
+  if(process.env.DOCKER_OPTIONS) return process.env.DOCKER_OPTIONS || DEFAULT_DOCKER_OPTIONS
+  if(process.env.DOCKER_OPTIONS_FILE) return readFile(process.env.DOCKER_OPTIONS_FILE)
 
   return DEFAULT_DOCKER_OPTIONS
 }
 
 function repositoryCredentials() {
   let fileCredentials = {}
-  if(process.env.DOCKER_REPOSITORY_CREDENTIALS_FILE){
-    fileCredentials = readJSONFile(process.env.DOCKER_REPOSITORY_CREDENTIALS_FILE)
+  if(process.env.DOCKER_REGISTRY_CREDENTIALS_FILE){
+    fileCredentials = readFile(process.env.DOCKER_REGISTRY_CREDENTIALS_FILE)
   }
-  const envCredentials = parseJSONEnvVar(process.env.DOCKER_REPOSITORY_CREDENTIALS) || DEFAULT_DOCKER_REPOSITORY_CREDENTIALS
+  const envCredentials = process.env.DOCKER_REGISTRY_CREDENTIALS || DEFAULT_DOCKER_REGISTRY_CREDENTIALS
   return mergeDeep(fileCredentials, envCredentials)
 }
 
@@ -78,7 +78,7 @@ export default {
     DOCKER_OPTIONS: dockerOptions(),
     DOCKER_PULL: stringToBoolean(process.env.DOCKER_PULL || DEFAULT_DOCKER_PULL),
     DOCKER_PULL_TIMEOUT: Number(process.env.DOCKER_PULL_TIMEOUT || DEFAULT_DOCKER_PULL_TIMEOUT),
-    DOCKER_REPOSITORY_CREDENTIALS: repositoryCredentials(),
+    DOCKER_REGISTRY_CREDENTIALS: repositoryCredentials(),
     DONT_START_CONTAINER: stringToBoolean(process.env.DONT_START_CONTAINER || DEFAULT_DONT_START_CONTAINER),
   },
 

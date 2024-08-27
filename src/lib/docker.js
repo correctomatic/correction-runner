@@ -120,7 +120,7 @@ async function getContainerLogs(container) {
 function getRepositoryCredentials(image) {
   const registryURL = extractRegistryURL(image)
 
-  const credentials = env.docker.DOCKER_REPOSITORY_CREDENTIALS[registryURL]
+  const credentials = env.docker.DOCKER_REGISTRY_CREDENTIALS[registryURL]
   return credentials || {}
 }
 
