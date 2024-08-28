@@ -6,7 +6,7 @@ import { readFile, mergeDeep } from '../lib/config.js'
 const DEFAULT_ENVIRONMENT = 'production'
 
 const DEFAULT_LOG_LEVEL = 'info'
-const DEFAULT_LOG_FILE = 'correctomatic.log'
+const DEFAULT_LOG_FILE = 1 // stdout
 
 
 const DEFAULT_DONT_START_CONTAINER='N'

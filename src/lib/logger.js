@@ -6,22 +6,23 @@ const logLevel = env.log.LOG_LEVEL
 const logFile = env.log.LOG_FILE
 
 let targets = []
+targets = [
+  {
+    level: logLevel,
+    target: 'pino/file',
+    options: {
+      destination: logFile,
+    },
+  },
+]
+
+// In development, log to the console with pretty-printing
 if (environment === 'development') {
   targets = [
     {
       level: logLevel,
       target: 'pino-pretty',
       options: {},
-    },
-  ]
-} else {
-  targets = [
-    {
-      level: logLevel,
-      target: 'pino/file',
-      options: {
-        destination: logFile,
-      },
     },
   ]
 }
