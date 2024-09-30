@@ -143,7 +143,6 @@ bun.lockb
 pnpm-lock.yaml
 
 # editor files
-.vscode
 .idea
 
 # Optional compressed files (npm generated package, zip, etc)
