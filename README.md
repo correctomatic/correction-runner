@@ -50,6 +50,20 @@ TO-DO
 
 You have the schema of the required response in the `src\schemas\container_response_schema.json` file.
 
+If your container generates unnecesary output that you can't avoid, you can enclose the correctomatic response between separators:
+```
+Some text from the container
+--BEGIN CORRECTOMATIC RESPONSE--
+{
+  "success": false,
+  "work_id": "123456",
+  "error": "The dog ate my correction"
+}
+--END CORRECTOMATIC RESPONSE--
+More text from the container
+```
+When the output fails to parse as JSON it will use the text between the separators as the output, ignoring the rest.
+
 ## Configuration
 
 The system is configured through environment variables. You can set them in a `.env` file in the root directory of the project. There is a `.env.example` file with the variables needed by the system. Not all of them are needed by all the components, so you can remove the ones that are not needed.

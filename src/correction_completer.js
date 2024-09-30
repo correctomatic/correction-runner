@@ -148,6 +148,29 @@ async function failJob(job, result, errorMessage) {
   return failedMessage
 }
 
+function searchCorrectomaticResponse(logs) {
+  const regex = /-+BEGIN CORRECTOMATIC RESPONSE-+\n([\s\S]*?)\n-+END CORRECTOMATIC RESPONSE-+/g
+  const matches = [...logs.matchAll(regex)];
+
+  if(!matches) throw new Error('No correctomaitc response found in the output')
+  if(matches.length > 1) throw new Error('More than one correctomatic response found in the output')
+  return matches[0][1].trim()
+}
+
+function getCorrectomaticResponse(logs) {
+  let response
+  try {
+    response = JSON.parse(logs)
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      // We will try to find the reponse enclosed in separators
+      response = JSON.parse(searchCorrectomaticResponse(logs))
+    } else throw error
+  }
+  if(!responseValidator(response)) throw new Error('Invalid response format')
+  return response
+}
+
 async function completeJob(job, container) {
 
   let logs
@@ -159,8 +182,7 @@ async function completeJob(job, container) {
 
   let response
   try {
-    response = JSON.parse(logs)
-    if(!responseValidator(response)) throw new Error('Invalid response format')
+    response = getCorrectomaticResponse(logs)
   } catch (error) {
     logger.debug(`Error in response format for the container ${job.data.container_id}: ${error.message}`)
     return failJob(job, 'Error processing container logs', error.message)
