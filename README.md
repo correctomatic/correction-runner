@@ -50,13 +50,51 @@ TO-DO
 
 You have the schema of the required response in the `src\schemas\container_response_schema.json` file.
 
+### Container's success response
+
+Here you have some examples of valid responses. grade and comments are optional fields, but there must be at least one of them.
+
+```json
+{
+  "success": true,
+  "grade": 85.5,
+  "comments": ["Great job!", "Keep up the good work."]
+}
+```
+
+```json
+{
+  "success": true,
+  "comments": ["Needs improvement in section B", "Good effort overall."]
+}
+```
+
+```json
+{
+  "success": true,
+  "grade": 85.5,
+}
+```
+
+### Container's error response
+
+The error response must have the `success` field set to `false` and an `error` field with a message explaining the error.
+
+```json
+{
+  "success": false,
+  "error": "The submission was incomplete."
+}
+```
+
+### Using separators
+
 If your container generates unnecesary output that you can't avoid, you can enclose the correctomatic response between separators:
 ```
 Some text from the container
 --BEGIN CORRECTOMATIC RESPONSE--
 {
   "success": false,
-  "work_id": "123456",
   "error": "The dog ate my correction"
 }
 --END CORRECTOMATIC RESPONSE--
