@@ -185,6 +185,7 @@ async function completeJob(job, container) {
     response = getCorrectomaticResponse(logs)
   } catch (error) {
     logger.debug(`Error in response format for the container ${job.data.container_id}: ${error.message}`)
+    logger.debug(`Container response was:${logs}`)
     return failJob(job, 'Error processing container logs', error.message)
   }
 

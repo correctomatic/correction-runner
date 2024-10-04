@@ -38,11 +38,54 @@ function signResponse(response) {
   return canonicalized
 }
 
-function buildNotificationData(jobData) {
+/*
+Example of jobData when there is an error:
+{
+  work_id: "a-random-work-id 9999",
+  error: true,
+  correction_data: "Error processing container logs - Unexpected token 'i', \"i%Z0rAx(n9\"... is not valid JSON",
+  callback: "http://whatever",
+}
+
+Example of  jobData when all worked:
+{
+  "data": {
+    "work_id": "2",
+    "error": false,
+    "correction_data": {
+      "success": true,
+      "grade": 100,
+      "comments": [
+        "Comment 1",
+        "Coment 2",
+        ...
+      ]
+    },
+    "callback": "http://whatever"
+  },
+  "returnValue": "Notification sent to http://host.docker.internal:5000/correctomatic/response at 2024-09-23T08:22:28.357Z"
+}
+*/
+
+function buildResponseFromError(jobData) {
+  return {
+    success: false,
+    work_id: jobData.work_id,
+    error: jobData.correction_data
+  }
+}
+
+function buildResponseFromSuccess(jobData){
   return {
     work_id: jobData.work_id,
+    // We have the same structure that we need in correction_data
     ...jobData.correction_data
   }
+}
+
+function buildNotificationData(jobData) {
+  if(jobData.error) return buildResponseFromError(jobData)
+  else return buildResponseFromSuccess(jobData)
 }
 
 async function notify(jobData) {
