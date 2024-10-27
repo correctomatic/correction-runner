@@ -98,7 +98,7 @@ Maybe we should add a mechanism to refresh the locks, but it's not necessary for
 
 */
 
-const logger = mainLogger.child({ module: 'correction_starter' })
+const logger = mainLogger.child({ module: 'correction_completer' })
 logger.debug(`Environment: ${JSON.stringify(clearSensitiveFields(env))}`)
 
 // Works in running queue that are not yet finished
