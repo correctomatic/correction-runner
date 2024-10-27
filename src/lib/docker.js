@@ -18,7 +18,6 @@ class TimeoutError extends Error {}
 // **************************************************************************
 const EXERCISE_FILE_IN_CONTAINER = '/tmp/exercise'
 
-function envVars(parameters) { return Object.entries(parameters).map(([key, value]) => `${key}=${value}`) }
 function generateBind(exerciseFile) {
   return [`${exerciseFile}:${EXERCISE_FILE_IN_CONTAINER}`]
 }
@@ -119,7 +118,7 @@ async function getContainerLogs(container) {
 
 function getRepositoryCredentials(image) {
   const registryURL = extractRegistryURL(image)
-  
+
   return env.docker.DOCKER_REGISTRY_CREDENTIALS[registryURL] || {}
 }
 
@@ -167,7 +166,7 @@ async function createContainer(image,options = {},logger = defaultLogger) {
 
   const defaultOptions = {
     binds: [],
-    environment: {},
+    environment: [],
     connectionTimeout: env.docker.DOCKER_TIMEOUT,
     pullTimeout: env.docker.DOCKER_PULL_TIMEOUT
   }
@@ -179,7 +178,7 @@ async function createContainer(image,options = {},logger = defaultLogger) {
     const container = await withTimeout(options.connectionTimeout, getDocker().createContainer({
       Image: image,
       name: generateContainerName(),
-      Env: envVars(options.environment),
+      Env: options.environment,
       AttachStdin: false,
       AttachStdout: true,
       AttachStderr: true,
@@ -198,7 +197,7 @@ async function createContainer(image,options = {},logger = defaultLogger) {
   }
 }
 
-async function createCorrectionContainer(image, file, logger = defaultLogger){
+async function createCorrectionContainer(image, file, params=[], logger = defaultLogger){
   const connectionTimeout = env.docker.DOCKER_TIMEOUT
   const pullTimeout = env.docker.DOCKER_PULL_TIMEOUT
   const pull = env.docker.DOCKER_PULL
@@ -208,9 +207,12 @@ async function createCorrectionContainer(image, file, logger = defaultLogger){
 
   const createOptions = {
     binds,
+    // Docker expects environment variables as an array of strings in the form 'KEY=VALUE' (https://github.com/apocas/dockerode/issues/130)
+    // That's the format that we have in the job data
+    environment: params,
     pull,
     connectionTimeout,
-    pullTimeout
+    pullTimeout,
   }
   const container = await createContainer(
     image, createOptions, logger
@@ -219,8 +221,8 @@ async function createCorrectionContainer(image, file, logger = defaultLogger){
   return container
 }
 
-async function launchCorrectionContainer(image, file, logger = defaultLogger) {
-  const container = await createCorrectionContainer(image, file)
+async function launchCorrectionContainer(image, file, params=[], logger = defaultLogger) {
+  const container = await createCorrectionContainer(image, file, params)
   try {
     // The next conditional is for helping with testing
     if(env.docker.DONT_START_CONTAINER) return container.id
