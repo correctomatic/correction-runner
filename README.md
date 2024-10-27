@@ -163,8 +163,6 @@ You can generate a pair of keys to sign the JWT tokens with the script `utils\ge
 
 You can delete the queues running the script `utils\reset_queues.js`:
 
-The code won't work unless you comment the `throw` at the start of the file. It's implemented this way to avoid deleting the queues by mistake.
-
 ### Remove dangling correction containers
 
 You can remove the correction container generated during the tests with the script `utils\remove_containers.sh`:
