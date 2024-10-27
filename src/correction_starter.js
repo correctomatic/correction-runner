@@ -42,9 +42,9 @@ logger.debug(`Pending queue config: ${JSON.stringify(clearSensitiveFields(PENDIN
 new Worker(PENDING_QUEUE_NAME, async job => {
   try {
     logger.info(`Received job: ${JSON.stringify(job.data)}`)
-    const { work_id, image, file, callback } = job.data
+    const { work_id, image, file, callback, params } = job.data
 
-    const containerId = await launchCorrectionContainer(image, file, logger)
+    const containerId = await launchCorrectionContainer(image, file, params, logger)
     await putInRunningQueue(job.name, work_id, containerId, callback)
 
     logger.info(`Correction started. Container: ${containerId}`)
