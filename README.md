@@ -11,6 +11,7 @@ The correction starter expects a message in the `pending_corrections` queue with
 - `work_id`: optional, caller's id of the exercise
 - `image`: name of the image to run
 - `file`: path of the file with the exercise
+- `params`: optional, array with the parameters to pass to the container with the format `key1=value1,key2=value2,...`
 - `callback`: URL to call with the results
 
 There is an implementation of a web service that will receive a file and the image to run, and puts the message in the queue. It's in this repository: https://github.com/correctomatic/correction-API
