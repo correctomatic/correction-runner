@@ -12,6 +12,17 @@ import {
 const logger = mainLogger.child({ module: 'correction_notifier' })
 logger.debug(`Environment: ${JSON.stringify(clearSensitiveFields(env))}`)
 
+// Capture SIGINT and SIGTERM signals
+process.on('SIGINT', async () => {
+  logger.info('SIGINT received, cleaning up.')
+  process.exit(0)
+})
+
+process.on('SIGTERM', async () => {
+  logger.info('SIGTERM received, cleaning up.')
+  process.exit(0)
+})
+
 /*
 We have two types of responses:
 - Success: { success: true, work_id, grade, comments }

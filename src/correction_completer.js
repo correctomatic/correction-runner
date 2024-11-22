@@ -101,6 +101,17 @@ Maybe we should add a mechanism to refresh the locks, but it's not necessary for
 const logger = mainLogger.child({ module: 'correction_completer' })
 logger.debug(`Environment: ${JSON.stringify(clearSensitiveFields(env))}`)
 
+// Capture SIGINT and SIGTERM signals
+process.on('SIGINT', async () => {
+  logger.info('SIGINT received, cleaning up.')
+  process.exit(0)
+})
+
+process.on('SIGTERM', async () => {
+  logger.info('SIGTERM received, cleaning up.')
+  process.exit(0)
+})
+
 // Works in running queue that are not yet finished
 const runningJobs = []
 
@@ -322,3 +333,4 @@ logger.info('Starting correction completer...')
 await initializeDocker(logger)
 listenForRunningQueue()
 listenForContainerCompletion()
+logger.info('Correction completer started')

@@ -94,8 +94,12 @@ class MemoryWritableStream extends Writable {
 // The logs are multiplexed, so we need to separate them
 // IMPORTANT: we are returning the standard output and then the standard error, concatenated
 async function getContainerLogs(container) {
+
   return new Promise((resolve, reject) => {
+
     container.logs({ follow: true, stdout: true, stderr: true }, (err, stream) => {
+      function cleanupStream() { stream?.destroy() }
+
       if (err) {
         reject(err)
         return
@@ -106,12 +110,16 @@ async function getContainerLogs(container) {
       container.modem.demuxStream(stream, stdout, stderr)
 
       stream.on('end', async () => {
+        cleanupStream()
         resolve(stdout.content() + stderr.content())
       })
 
       stream.on('error', (err) => {
+        cleanupStream()
         reject(err)
       })
+
+      stream.on('close', cleanupStream)
     })
   })
 }

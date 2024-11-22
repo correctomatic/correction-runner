@@ -12,20 +12,46 @@ import {
 import initializeDocker from './servers/docker_connection.js'
 import { launchCorrectionContainer} from './lib/docker.js'
 
+let runningQueue
+let worker
+
 const logger = mainLogger.child({ module: 'correction_starter' })
 logger.debug(`Environment: ${JSON.stringify(clearSensitiveFields(env))}`)
 
 logger.info('Starting correction starter...')
 await initializeDocker(logger)
 
-// Capture CTRL+C
-process.on('SIGINT', () => {
-  logger.info('Captured SIGINT, exiting...')
-  process.exit(0)
+const cleanup = async () => {
+  logger.info('Shutting down gracefully...')
+  try {
+    // Close BullMQ queues and workers
+    await runningQueue.close()
+    logger.info('Running queue closed.')
+    await worker.close()
+    logger.info('Worker closed.')
+    logger.info('All resources cleaned up.')
+    process.exit(0)
+  } catch (error) {
+    logger.error(`Error during shutdown: ${error.message}`)
+  } finally {
+    process.exit(0)
+  }
+}
+
+// Capture SIGINT and SIGTERM signals
+process.on('SIGINT', async () => {
+  logger.info('SIGINT received.')
+  await cleanup()
 })
 
+process.on('SIGTERM', async () => {
+  logger.info('SIGTERM received.')
+  await cleanup()
+})
+
+
 // The queue is opened only once, when the server starts
-const runningQueue = new Queue(RUNNING_QUEUE_NAME,RUNNING_QUEUE_CONFIG)
+runningQueue = new Queue(RUNNING_QUEUE_NAME,RUNNING_QUEUE_CONFIG)
 
 async function putInRunningQueue(jobName, work_id, containerId, callback) {
   const jobData = {
@@ -39,7 +65,7 @@ async function putInRunningQueue(jobName, work_id, containerId, callback) {
 }
 
 logger.debug(`Pending queue config: ${JSON.stringify(clearSensitiveFields(PENDING_QUEUE_CONFIG))}`)
-new Worker(PENDING_QUEUE_NAME, async job => {
+worker = new Worker(PENDING_QUEUE_NAME, async job => {
   try {
     logger.info(`Received job: ${JSON.stringify(job.data)}`)
     const { work_id, image, file, callback, params } = job.data
